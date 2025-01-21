@@ -3,6 +3,9 @@ from time import sleep
 from robot_hat import Music,TTS
 import readchar
 
+
+music = Music()
+
 manual = '''
 Press keys on keyboard to control PiCar-X!
     w: Forward
