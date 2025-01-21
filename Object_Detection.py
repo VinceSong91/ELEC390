@@ -24,7 +24,7 @@ def show_info():
     print(manual)
 
     
-music.music_play('../sounds/Eazy-E.mp3')
+music.music_play('../Eazy-E.mp3')
 
 if __name__ == "__main__":
     try:
