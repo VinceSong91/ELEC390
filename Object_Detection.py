@@ -24,7 +24,7 @@ def show_info():
     print(manual)
 
     
-music.music_play('Travis-Scott-FE-N-(HipHopKit.com).mp3')
+music.music_play('ssstik.io_1736833668203.mp3')
 
 if __name__ == "__main__":
     try:
