@@ -26,6 +26,8 @@ def show_info():
     
 music.music_play('Lebron James Sunshine Meme (including the evil Lebron James).mp3')
 
+
+
 if __name__ == "__main__":
     try:
         pan_angle = 0
@@ -35,6 +37,9 @@ if __name__ == "__main__":
         while True:
             key = readchar.readkey()
             key = key.lower()
+            if key == "q":
+                music.music_play('block-by-james-!!!-made-with-Voicemod.mp3')
+
             if key in('wsadikjl'):
                 if 'w' == key:
                     px.set_dir_servo_angle(0)
