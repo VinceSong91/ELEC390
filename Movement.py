@@ -25,10 +25,6 @@ class DeepPiCar(object):
         self.camera.set(3, self.__SCREEN_WIDTH)
         self.camera.set(4, self.__SCREEN_HEIGHT)
 
-        # Camera servos (pan and tilt)
-        self.px.set_camera_servo1_angle(90)  # Starting position for pan
-        self.px.set_camera_servo2_angle(90)  # Starting position for tilt
-
         logging.debug('Set up wheels')
         # Back wheels and speed
         self.px.forward(0)  # Stop initially
