@@ -76,4 +76,6 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
+    import os
+    os.environ['DISPLAY'] = ':0'
     main()
