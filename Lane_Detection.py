@@ -22,7 +22,9 @@ def average_slope_intercept(lines):
 
     for line in lines:
         for x1, y1, x2, y2 in line:
-            slope = (y2 - y1) / (x2 - x1) if x1 != x2 else 0
+            if x1 == x2:  # Vertical line, slope is undefined
+                continue
+            slope = (y2 - y1) / (x2 - x1)
             intercept = y1 - slope * x1
             length = np.sqrt((y2 - y1) ** 2 + (x2 - x1) ** 2)
             if slope < 0:
@@ -40,6 +42,8 @@ def pixel_points(y1, y2, line):
     if line is None:
         return None
     slope, intercept = line
+    if slope == 0:  # Prevent divide by zero
+        return None
     x1 = int((y1 - intercept) / slope)
     x2 = int((y2 - intercept) / slope)
     return (x1, int(y1)), (x2, int(y2))
@@ -57,6 +61,8 @@ def frame_processor(image):
     edges = cv2.Canny(blur, 50, 150)
     region = region_selection(edges)
     hough = hough_transform(region)
+    if hough is None or len(hough) == 0:
+        return image
     result = draw_lane_lines(image, [pixel_points(image.shape[0], image.shape[0]*0.6, line) for line in average_slope_intercept(hough)])
     return result
 
