@@ -16,6 +16,10 @@ def region_selection(image):
 
 # Hough transform for line detection
 def hough_transform(image):
+    # Ensure the input image is grayscale (CV_8UC1)
+    if len(image.shape) > 2:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
     return cv2.HoughLinesP(image, 1, np.pi/180, 20, minLineLength=30, maxLineGap=500)
 
 # Average slope and intercept for lane lines
