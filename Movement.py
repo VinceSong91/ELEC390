@@ -104,23 +104,23 @@ class DeepPiCar(object):
     def simulate_camera_movement(self):
         """ Simulate the camera pan and tilt servo movements """
         for angle in range(0, 35):
-            self.px.set_cam_pan_angle(90 + angle)
+            self.px.set_cam_pan_angle(angle)
             time.sleep(0.01)
         for angle in range(35, -35, -1):
-            self.px.set_cam_pan_angle(90 + angle)
+            self.px.set_cam_pan_angle(angle)
             time.sleep(0.01)
         for angle in range(-35, 0):
-            self.px.set_cam_pan_angle(90 + angle)
+            self.px.set_cam_pan_angle(angle)
             time.sleep(0.01)
         
         for angle in range(0, 35):
-            self.px.set_cam_tilt_angle(90 + angle)
+            self.px.set_cam_tilt_angle(angle)
             time.sleep(0.01)
         for angle in range(35, -35, -1):
-            self.px.set_cam_tilt_angle(90 + angle)
+            self.px.set_cam_tilt_angle(angle)
             time.sleep(0.01)
         for angle in range(-35, 0):
-            self.px.set_cam_tilt_angle(90 + angle)
+            self.px.set_cam_tilt_angle(angle)
             time.sleep(0.01)
 
     def simulate_steering_movement(self):
