@@ -2,7 +2,7 @@ import logging
 import cv2
 import datetime
 import time
-from Lane_Detection import Lane_Detection
+from Lane_Detection import MyHandCodedLaneFollower
 from picarx import Picarx
 
 _SHOW_IMAGE = True
@@ -36,7 +36,7 @@ class DeepPiCar(object):
         # Front wheels (steering control)
         self.px.set_dir_servo_angle(90)  # Neutral steering position (straight)
 
-        self.lane_follower = Lane_Detection(self)
+        self.lane_follower = MyHandCodedLaneFollower(self)
 
         self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
         datestr = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
