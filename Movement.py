@@ -138,10 +138,15 @@ def show_image(title, frame, show=_SHOW_IMAGE):
             print("Failed to show image. Ensure you're running in a graphical environment.")
 
 
-
 def main():
     with DeepPiCar() as car:
-        car.drive(40)
+        try:
+            print("Driving continuously. Press Ctrl+C to stop.")
+            while True:
+                car.drive(40)
+        except KeyboardInterrupt:
+            print("Stopping the car.")
+            car.cleanup()
 
 
 if __name__ == '__main__':
