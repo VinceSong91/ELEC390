@@ -141,7 +141,12 @@ class DeepPiCar(object):
 ############################
 def show_image(title, frame, show=_SHOW_IMAGE):
     if show:
-        cv2.imshow(title, frame)
+        try:
+            cv2.imshow(title, frame)
+        except cv2.error as e:
+            print(f"OpenCV Error: {e}")
+            print("Failed to show image. Ensure you're running in a graphical environment.")
+
 
 
 def main():
