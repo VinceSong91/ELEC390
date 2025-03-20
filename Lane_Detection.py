@@ -4,30 +4,30 @@ import cv2
 class LaneDetection:
     def __init__(self):
         self.camera = cv2.VideoCapture(0)  # Change to 0 for default camera
-        self.camera.set(3, 320)  # Set frame width
-        self.camera.set(4, 240)  # Set frame height
+        self.camera.set(3, 640)  # Set frame width
+        self.camera.set(4, 480)  # Set frame height
 
     def region_selection(self, image):
         """
         Selects a region of interest (ROI) in the image.
         """
         mask = np.zeros_like(image)
-        ignore_mask_color = 255
         rows, cols = image.shape[:2]
+        # Define a trapezoidal ROI (adjust these values based on your camera's perspective)
         vertices = np.array([[
-            [cols * 0.1, rows * 0.95],
-            [cols * 0.4, rows * 0.6],
-            [cols * 0.6, rows * 0.6],
-            [cols * 0.9, rows * 0.95]
+            [cols * 0.1, rows * 0.95],  # Bottom-left
+            [cols * 0.4, rows * 0.6],   # Top-left
+            [cols * 0.6, rows * 0.6],   # Top-right
+            [cols * 0.9, rows * 0.95]   # Bottom-right
         ]], dtype=np.int32)
-        cv2.fillPoly(mask, vertices, ignore_mask_color)
+        cv2.fillPoly(mask, [vertices], 255)
         return cv2.bitwise_and(image, mask)
 
     def hough_transform(self, image):
         """
         Applies Hough Transform to detect lines in the image.
         """
-        return cv2.HoughLinesP(image, 1, np.pi / 180, 20, minLineLength=20, maxLineGap=500)
+        return cv2.HoughLinesP(image, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=100)
 
     def average_slope_intercept(self, lines):
         """
@@ -58,7 +58,7 @@ class LaneDetection:
             if lane is not None:
                 slope, intercept = lane
                 y1 = image.shape[0]  # Bottom of the image
-                y2 = int(y1 * 0.6)    # Top of the lane line
+                y2 = int(y1 * 0.6)  # Top of the lane line
 
                 # Avoid division by zero or near-zero slope
                 if abs(slope) < 1e-5:
@@ -66,19 +66,32 @@ class LaneDetection:
                 
                 x1 = int((y1 - intercept) / slope)
                 x2 = int((y2 - intercept) / slope)
-                cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 10)
+                cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 10)  # Draw lanes in green
         return cv2.addWeighted(image, 0.8, line_image, 1, 0)
 
     def follow_lane(self, image):
         """
         Processes the image to detect and follow the lane.
         """
+        # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        # Apply Gaussian blur to reduce noise
+        blur = cv2.GaussianBlur(gray, (7, 7), 0)
+
+        # Detect edges using Canny
         edges = cv2.Canny(blur, 50, 150)
+
+        # Select region of interest
         region = self.region_selection(edges)
+
+        # Detect lines using Hough Transform
         lines = self.hough_transform(region)
+
+        # Average lines to form left and right lanes
         left_lane, right_lane = self.average_slope_intercept(lines)
+
+        # Draw lane lines on the original image
         return self.draw_lane_lines(image, left_lane, right_lane)
 
     def run(self):
@@ -94,14 +107,16 @@ class LaneDetection:
                     print("Failed to capture frame. Stopping.")
                     break
                 
+                # Process the frame to detect lanes
                 processed_frame = self.follow_lane(frame)
 
                 # Resize the frame to make it larger
-                scale_percent = 200  # Increase this value to make the window larger
+                scale_percent = 150  # Increase this value to make the window larger
                 width = int(frame.shape[1] * scale_percent / 100)
                 height = int(frame.shape[0] * scale_percent / 100)
                 resized_frame = cv2.resize(processed_frame, (width, height), interpolation=cv2.INTER_AREA)
 
+                # Display the processed frame
                 cv2.imshow("Lane Detection", resized_frame)
 
                 # Press 'q' to exit
