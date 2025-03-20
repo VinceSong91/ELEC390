@@ -95,7 +95,14 @@ class LaneDetection:
                     break
                 
                 processed_frame = self.follow_lane(frame)
-                cv2.imshow("Lane Detection", processed_frame)
+
+                # Resize the frame to make it larger
+                scale_percent = 200  # Increase this value to make the window larger
+                width = int(frame.shape[1] * scale_percent / 100)
+                height = int(frame.shape[0] * scale_percent / 100)
+                resized_frame = cv2.resize(processed_frame, (width, height), interpolation=cv2.INTER_AREA)
+
+                cv2.imshow("Lane Detection", resized_frame)
 
                 # Press 'q' to exit
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -103,10 +110,4 @@ class LaneDetection:
                     break
         except Exception as e:
             print(f"Error: {e}")
-        finally:
-            print("Cleaning up resources.")
-            self.camera.release()
-            cv2.destroyAllWindows()
-
-if __name__ == '__main__':
-    LaneDetection().run()
+        finally
