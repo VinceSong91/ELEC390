@@ -78,7 +78,6 @@ class LaneDetection:
 
         steering_angle = int(90 - np.degrees(np.arctan(avg_slope)))
         steering_angle = np.clip(steering_angle, 45, 135)
-        print(f"Steering Angle: {steering_angle}")
         self.px.set_dir_servo_angle(steering_angle)
 
     def run(self):
