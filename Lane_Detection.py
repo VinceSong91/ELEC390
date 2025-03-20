@@ -16,7 +16,7 @@ class LaneDetection:
         gblur = cv2.GaussianBlur(gray, (5, 5), 0)
 
         # Adjusted grayscale threshold for white
-        _, white_mask = cv2.threshold(gblur, 150, 255, cv2.THRESH_BINARY)
+        _, white_mask = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)[1]
 
         # Adjusted HSV range for yellow
         lower_yellow = np.array([15, 50, 50])
