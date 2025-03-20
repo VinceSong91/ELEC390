@@ -8,18 +8,6 @@ px = Picarx()
 # Initialize PiCar-X camera
 camera = cv2.VideoCapture(0)  # Use 0 for the default camera
 
-def nothing(x):
-    pass
-
-# Create trackbars for adjusting HSV thresholds
-cv2.namedWindow("Trackbars")
-cv2.createTrackbar("L - H", "Trackbars", 0, 179, nothing)  # Hue range is 0-179
-cv2.createTrackbar("L - S", "Trackbars", 0, 255, nothing)  # Saturation range is 0-255
-cv2.createTrackbar("L - V", "Trackbars", 200, 255, nothing)  # Value range is 0-255
-cv2.createTrackbar("U - H", "Trackbars", 179, 179, nothing)
-cv2.createTrackbar("U - S", "Trackbars", 255, 255, nothing)
-cv2.createTrackbar("U - V", "Trackbars", 255, 255, nothing)
-
 while True:
     # Capture frame from PiCar-X camera
     success, frame = camera.read()
@@ -73,9 +61,6 @@ while True:
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)  # Remove noise
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)  # Fill gaps
 
-    # Apply the mask to the transformed frame
-    masked_frame = cv2.bitwise_and(transformed_frame, transformed_frame, mask=mask)
-
     # Histogram to find lane positions
     histogram = np.sum(mask[mask.shape[0] // 2:, :], axis=0)
     midpoint = int(histogram.shape[0] / 2)
@@ -120,7 +105,6 @@ while True:
     cv2.imshow("Original", frame)
     cv2.imshow("Bird's Eye View", transformed_frame)
     cv2.imshow("Lane Detection - Mask", mask)
-    cv2.imshow("Lane Detection - Masked Frame", masked_frame)
     cv2.imshow("Lane Detection - Sliding Windows", msk)
 
     # Exit on 'ESC' key press
