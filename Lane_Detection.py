@@ -115,9 +115,9 @@ class LaneDetection:
 
             # If found > minpix pixels, recenter next window
             if len(good_left_inds) > minpix:
-                leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
+                leftx_current = np.int64(np.mean(nonzerox[good_left_inds]))
             if len(good_right_inds) > minpix:
-                rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
+                rightx_current = np.int64(np.mean(nonzerox[good_right_inds]))
 
         # Concatenate the arrays of indices
         left_lane_inds = np.concatenate(left_lane_inds)
