@@ -15,13 +15,13 @@ class LaneDetection:
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         gblur = cv2.GaussianBlur(gray, (5, 5), 0)
 
-        # Adjusted grayscale threshold for white
-        _, white_mask = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
-
         # Adjusted HSV range for yellow
         lower_yellow = np.array([15, 50, 50])
         upper_yellow = np.array([35, 255, 255])
         yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+
+        # Use adaptive thresholding for white lanes
+        white_mask = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
 
         # Combine white and yellow masks
         mask = cv2.bitwise_or(white_mask, yellow_mask)
@@ -70,7 +70,7 @@ class LaneDetection:
                 # Debug: Display intermediate results
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                _, white_mask = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+                white_mask = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
                 lower_yellow = np.array([15, 50, 50])
                 upper_yellow = np.array([35, 255, 255])
                 yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
