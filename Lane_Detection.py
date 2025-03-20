@@ -14,10 +14,16 @@ class LaneDetection:
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         gblur = cv2.GaussianBlur(gray, (5, 5), 0)
-        white_mask = cv2.threshold(gblur, 200, 255, cv2.THRESH_BINARY)[1]
-        lower_yellow = np.array([20, 100, 100])
-        upper_yellow = np.array([30, 255, 255])
+
+        # Adjusted grayscale threshold for white
+        white_mask = cv2.threshold(gblur, 150, 255, cv2.THRESH_BINARY)[1]
+
+        # Adjusted HSV range for yellow
+        lower_yellow = np.array([15, 50, 50])
+        upper_yellow = np.array([35, 255, 255])
         yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+
+        # Combine white and yellow masks
         mask = cv2.bitwise_or(white_mask, yellow_mask)
         return mask
 
@@ -52,10 +58,10 @@ class LaneDetection:
                 # Define ROI polygon
                 height, width = processed_img.shape
                 polygon = np.array([[
-                    [int(width * 0.1), height],  # Bottom-left
-                    [int(width * 0.4), int(height * 0.6)],  # Top-left
-                    [int(width * 0.6), int(height * 0.6)],  # Top-right
-                    [int(0.9 * width), height]  # Bottom-right
+                    [int(width * 0.2), height],  # Bottom-left
+                    [int(width * 0.45), int(height * 0.65)],  # Top-left
+                    [int(width * 0.55), int(height * 0.65)],  # Top-right
+                    [int(0.8 * width), height]  # Bottom-right
                 ]], dtype=np.int32)
 
                 # Apply ROI masking
@@ -64,9 +70,9 @@ class LaneDetection:
                 # Debug: Display intermediate results
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                white_mask = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)[1]
-                lower_yellow = np.array([20, 100, 100])
-                upper_yellow = np.array([30, 255, 255])
+                white_mask = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)[1]
+                lower_yellow = np.array([15, 50, 50])
+                upper_yellow = np.array([35, 255, 255])
                 yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
                 combined_mask = cv2.bitwise_or(white_mask, yellow_mask)
 
