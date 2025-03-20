@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 class LaneDetection:
     def __init__(self):
-        self.camera = cv2.VideoCapture(-1)
+        self.camera = cv2.VideoCapture(0)  # Change to 0 for default camera
         self.camera.set(3, 320)
         self.camera.set(4, 240)
 
@@ -66,10 +66,7 @@ class LaneDetection:
 
     def run(self):
         print("Press 'q' to stop.")
-        plt.ion()  # Enable interactive mode
-        fig, ax = plt.subplots()
-        im_display = ax.imshow(np.zeros((240, 320, 3), dtype=np.uint8))
-
+        
         try:
             while True:
                 ret, frame = self.camera.read()
@@ -78,10 +75,10 @@ class LaneDetection:
                     break
                 
                 processed_frame = self.follow_lane(frame)
-                im_display.set_data(processed_frame)
-                plt.pause(0.01)
+                cv2.imshow("Lane Detection", processed_frame)
 
-                if plt.waitforbuttonpress(0.01):
+                # Press 'q' to exit
+                if cv2.waitKey(1) & 0xFF == ord('q'):
                     print("Stopping.")
                     break
         except Exception as e:
@@ -89,8 +86,7 @@ class LaneDetection:
         finally:
             print("Cleaning up resources.")
             self.camera.release()
-            plt.ioff()
-            plt.close()
+            cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     LaneDetection().run()
