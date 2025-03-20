@@ -53,59 +53,27 @@ while True:
     mask_white = cv2.inRange(hsv_transformed_frame, lower_white, upper_white)
     mask_yellow = cv2.inRange(hsv_transformed_frame, lower_yellow, upper_yellow)
 
-    # Combine masks
-    mask = cv2.bitwise_or(mask_white, mask_yellow)
-
-    # Clean up the mask using morphological operations
+    # Clean up the masks using morphological operations
     kernel = np.ones((5, 5), np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)  # Remove noise
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)  # Fill gaps
+    mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_OPEN, kernel)  # Remove noise
+    mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_CLOSE, kernel)  # Fill gaps
 
-    # Histogram to find lane positions
-    histogram = np.sum(mask[mask.shape[0] // 2:, :], axis=0)
-    midpoint = int(histogram.shape[0] / 2)
-    left_base = np.argmax(histogram[:midpoint])
-    right_base = np.argmax(histogram[midpoint:]) + midpoint
+    mask_yellow = cv2.morphologyEx(mask_yellow, cv2.MORPH_OPEN, kernel)  # Remove noise
+    mask_yellow = cv2.morphologyEx(mask_yellow, cv2.MORPH_CLOSE, kernel)  # Fill gaps
 
-    # Sliding Window
-    y = 472
-    lx = []
-    rx = []
+    # Combine masks (optional, if you want a single mask for both lanes)
+    mask_combined = cv2.bitwise_or(mask_white, mask_yellow)
 
-    msk = mask.copy()
-
-    while y > 0:
-        ## Left threshold
-        img = mask[y - 40:y, left_base - 50:left_base + 50]
-        contours, _ = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        for contour in contours:
-            M = cv2.moments(contour)
-            if M["m00"] != 0:
-                cx = int(M["m10"] / M["m00"])
-                cy = int(M["m01"] / M["m00"])
-                lx.append(left_base - 50 + cx)
-                left_base = left_base - 50 + cx
-
-        ## Right threshold
-        img = mask[y - 40:y, right_base - 50:right_base + 50]
-        contours, _ = cv2.findContours(img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        for contour in contours:
-            M = cv2.moments(contour)
-            if M["m00"] != 0:
-                cx = int(M["m10"] / M["m00"])
-                cy = int(M["m01"] / M["m00"])
-                lx.append(right_base - 50 + cx)
-                right_base = right_base - 50 + cx
-
-        cv2.rectangle(msk, (left_base - 50, y), (left_base + 50, y - 40), (255, 255, 255), 2)
-        cv2.rectangle(msk, (right_base - 50, y), (right_base + 50, y - 40), (255, 255, 255), 2)
-        y -= 40
+    # Apply the masks to the transformed frame
+    masked_white = cv2.bitwise_and(transformed_frame, transformed_frame, mask=mask_white)
+    masked_yellow = cv2.bitwise_and(transformed_frame, transformed_frame, mask=mask_yellow)
 
     # Display frames
     cv2.imshow("Original", frame)
     cv2.imshow("Bird's Eye View", transformed_frame)
-    cv2.imshow("Lane Detection - Mask", mask)
-    cv2.imshow("Lane Detection - Sliding Windows", msk)
+    cv2.imshow("White Lane Mask", mask_white)
+    cv2.imshow("Yellow Lane Mask", mask_yellow)
+    cv2.imshow("Combined Mask", mask_combined)
 
     # Exit on 'ESC' key press
     if cv2.waitKey(10) == 27:
