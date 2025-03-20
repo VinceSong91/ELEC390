@@ -64,34 +64,33 @@ class LaneDetection:
                 cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 10)
         return cv2.addWeighted(image, 0.8, line_image, 1, 0)
 
-def run(self):
-    print("Press 'q' to stop.")
-    self.px.forward(0)  # Ensure wheels stay still
+    def run(self):
+        print("Press 'q' to stop.")
+        plt.ion()  # Enable interactive mode
+        fig, ax = plt.subplots()
+        im_display = ax.imshow(np.zeros((240, 320, 3), dtype=np.uint8))
 
-    plt.ion()  # Enable interactive mode
-    fig, ax = plt.subplots()
-    im_display = ax.imshow(np.zeros((240, 320, 3), dtype=np.uint8))
+        try:
+            while True:
+                ret, frame = self.camera.read()
+                if not ret:
+                    print("Failed to capture frame. Stopping.")
+                    break
+                
+                processed_frame = self.follow_lane(frame)
+                im_display.set_data(processed_frame)
+                plt.pause(0.01)
 
-    while True:
-        ret, frame = self.camera.read()
-        if not ret:
-            print("Failed to capture frame. Stopping the car.")
-            self.px.forward(0)
-            break
-        
-        processed_frame = self.follow_lane(frame)
-        im_display.set_data(processed_frame)
-        plt.pause(0.01)  # Pause for a brief moment to update the display
-        
-        if plt.waitforbuttonpress(0.01):  # Stop if any key is pressed
-            print("Stopping the car.")
-            self.px.forward(0)
-            break
-
-    self.camera.release()
-    plt.ioff()
-    plt.close()
-
+                if plt.waitforbuttonpress(0.01):
+                    print("Stopping.")
+                    break
+        except Exception as e:
+            print(f"Error: {e}")
+        finally:
+            print("Cleaning up resources.")
+            self.camera.release()
+            plt.ioff()
+            plt.close()
 
 if __name__ == '__main__':
     LaneDetection().run()
