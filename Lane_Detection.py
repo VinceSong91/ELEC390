@@ -144,10 +144,10 @@ class LaneDetection:
                 # Define ROI polygon
                 height, width = processed_img.shape
                 polygon = np.array([[
-                    [int(width * 0.2), height],  # Bottom-left
-                    [int(width * 0.45), int(height * 0.65)],  # Top-left
-                    [int(width * 0.55), int(height * 0.65)],  # Top-right
-                    [int(0.8 * width), height]  # Bottom-right
+                    [int(width * 0.1), height],  # Bottom-left
+                    [int(width * 0.4), int(height * 0.6)],  # Top-left
+                    [int(width * 0.6), int(height * 0.6)],  # Top-right
+                    [int(0.9 * width), height]  # Bottom-right
                 ]], dtype=np.int32)
 
                 # Apply ROI masking
@@ -167,6 +167,11 @@ class LaneDetection:
 
                 # Display the result
                 cv2.imshow("Lane Detection", result)
+
+                # Debug: Display intermediate results
+                cv2.imshow("Preprocessed Image", processed_img)
+                cv2.imshow("Warped Image", masked_img)
+                cv2.waitKey(1)
 
                 # Press 'q' to exit
                 if cv2.waitKey(1) & 0xFF == ord('q'):
