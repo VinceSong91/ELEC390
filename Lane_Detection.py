@@ -6,6 +6,8 @@ class LaneDetection:
         self.camera = cv2.VideoCapture(0)  # Change to 0 for default camera
         self.camera.set(3, 640)  # Set frame width
         self.camera.set(4, 480)  # Set frame height
+        self.left_fit = None  # Store previous left lane fit
+        self.right_fit = None  # Store previous right lane fit
 
     def region_selection(self, image):
         """
@@ -63,9 +65,10 @@ class LaneDetection:
             [cols * 0.8, rows]   # Bottom-right
         ]])
         # Compute the perspective transform matrix
-        M = cv2.getPerspectiveTransform(src, dst)
+        self.M = cv2.getPerspectiveTransform(src, dst)
+        self.M_inv = cv2.getPerspectiveTransform(dst, src)  # Inverse transform
         # Warp the image
-        warped = cv2.warpPerspective(image, M, (cols, rows))
+        warped = cv2.warpPerspective(image, self.M, (cols, rows))
         return warped
 
     def sliding_window_search(self, binary_warped):
@@ -115,19 +118,23 @@ class LaneDetection:
 
             # If found > minpix pixels, recenter next window
             if len(good_left_inds) > minpix:
-                leftx_current = np.int64(np.mean(nonzerox[good_left_inds]))
+                leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
             if len(good_right_inds) > minpix:
-                rightx_current = np.int64(np.mean(nonzerox[good_right_inds]))
+                rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
 
         # Concatenate the arrays of indices
-        left_lane_inds = np.concatenate(left_lane_inds)
-        right_lane_inds = np.concatenate(right_lane_inds)
+        left_lane_inds = np.concatenate(left_lane_inds) if left_lane_inds else np.array([], dtype=np.int64)
+        right_lane_inds = np.concatenate(right_lane_inds) if right_lane_inds else np.array([], dtype=np.int64)
 
         # Extract left and right line pixel positions
         leftx = nonzerox[left_lane_inds]
         lefty = nonzeroy[left_lane_inds]
         rightx = nonzerox[right_lane_inds]
         righty = nonzeroy[right_lane_inds]
+
+        # Check if lanes are detected
+        if len(leftx) == 0 or len(rightx) == 0:
+            return None, None  # Return None if no lanes are detected
 
         # Fit a second-order polynomial to each lane
         left_fit = np.polyfit(lefty, leftx, 2)
@@ -139,6 +146,9 @@ class LaneDetection:
         """
         Draws the detected lane lines on the image.
         """
+        if left_fit is None or right_fit is None:
+            return image  # Skip drawing if no lanes are detected
+
         # Create an image to draw the lines on
         warp_zero = np.zeros_like(image[:, :, 0]).astype(np.uint8)
         color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
@@ -177,6 +187,12 @@ class LaneDetection:
 
         # Detect lanes using sliding window search
         left_fit, right_fit = self.sliding_window_search(binary_warped)
+
+        # If no lanes are detected, use previous fit
+        if left_fit is None or right_fit is None:
+            left_fit, right_fit = self.left_fit, self.right_fit
+        else:
+            self.left_fit, self.right_fit = left_fit, right_fit  # Update previous fit
 
         # Draw lane lines on the original image
         return self.draw_lane_lines(image, left_fit, right_fit)
