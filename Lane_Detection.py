@@ -17,7 +17,7 @@ cv2.createTrackbar("L - H", "Trackbars", 0, 179, nothing)  # Hue range is 0-179
 cv2.createTrackbar("L - S", "Trackbars", 0, 255, nothing)  # Saturation range is 0-255
 cv2.createTrackbar("L - V", "Trackbars", 200, 255, nothing)  # Value range is 0-255
 cv2.createTrackbar("U - H", "Trackbars", 179, 179, nothing)
-cv2.createTrackbar("U - S", "Trackbars", 50, 255, nothing)
+cv2.createTrackbar("U - S", "Trackbars", 255, 255, nothing)
 cv2.createTrackbar("U - V", "Trackbars", 255, 255, nothing)
 
 while True:
@@ -30,10 +30,10 @@ while True:
     frame = cv2.resize(frame, (640, 480))
 
     ## Choosing points for perspective transformation
-    tl = (222, 387)
-    bl = (70, 472)
-    tr = (400, 380)
-    br = (538, 472)
+    tl = (222, 387)  # Top-left
+    bl = (70, 472)   # Bottom-left
+    tr = (400, 380)  # Top-right
+    br = (538, 472)  # Bottom-right
 
     cv2.circle(frame, tl, 5, (0, 0, 255), -1)
     cv2.circle(frame, bl, 5, (0, 0, 255), -1)
@@ -52,20 +52,26 @@ while True:
     # Convert the transformed frame to HSV color space
     hsv_transformed_frame = cv2.cvtColor(transformed_frame, cv2.COLOR_BGR2HSV)
 
-    # Get current positions of the trackbars
-    l_h = cv2.getTrackbarPos("L - H", "Trackbars")
-    l_s = cv2.getTrackbarPos("L - S", "Trackbars")
-    l_v = cv2.getTrackbarPos("L - V", "Trackbars")
-    u_h = cv2.getTrackbarPos("U - H", "Trackbars")
-    u_s = cv2.getTrackbarPos("U - S", "Trackbars")
-    u_v = cv2.getTrackbarPos("U - V", "Trackbars")
+    # Define HSV ranges for white and yellow
+    # White lanes
+    lower_white = np.array([0, 0, 200])  # Low H, S, high V
+    upper_white = np.array([179, 30, 255])  # High H, low S, high V
 
-    # Define the lower and upper bounds for the color thresholding
-    lower = np.array([l_h, l_s, l_v])
-    upper = np.array([u_h, u_s, u_v])
+    # Yellow lanes
+    lower_yellow = np.array([20, 100, 100])  # Low H, high S, high V
+    upper_yellow = np.array([30, 255, 255])  # High H, high S, high V
 
-    # Create a mask using the HSV range
-    mask = cv2.inRange(hsv_transformed_frame, lower, upper)
+    # Create masks for white and yellow
+    mask_white = cv2.inRange(hsv_transformed_frame, lower_white, upper_white)
+    mask_yellow = cv2.inRange(hsv_transformed_frame, lower_yellow, upper_yellow)
+
+    # Combine masks
+    mask = cv2.bitwise_or(mask_white, mask_yellow)
+
+    # Clean up the mask using morphological operations
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)  # Remove noise
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)  # Fill gaps
 
     # Apply the mask to the transformed frame
     masked_frame = cv2.bitwise_and(transformed_frame, transformed_frame, mask=mask)
