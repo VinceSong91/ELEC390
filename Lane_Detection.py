@@ -160,10 +160,10 @@ class LaneDetection:
                 # Define ROI polygon
                 height, width = processed_img.shape
                 polygon = np.array([[
-                    [int(width * 0.1), height],
-                    [int(width * 0.45), int(height * 0.6)],
-                    [int(width * 0.55), int(height * 0.6)],
-                    [int(0.95 * width), height]
+                    [int(width * 0.1), height],  # Bottom-left
+                    [int(width * 0.4), int(height * 0.6)],  # Top-left
+                    [int(width * 0.6), int(height * 0.6)],  # Top-right
+                    [int(0.9 * width), height]  # Bottom-right
                 ]], dtype=np.int32)
 
                 # Apply ROI masking
@@ -171,16 +171,16 @@ class LaneDetection:
 
                 # Define source and destination points for perspective transform
                 src = np.float32([[
-                    [int(width * 0.45), int(height * 0.6)],
-                    [int(width * 0.55), int(height * 0.6)],
-                    [int(0.95 * width), height],
-                    [int(width * 0.1), height]
+                    [int(width * 0.4), int(height * 0.6)],  # Top-left
+                    [int(width * 0.6), int(height * 0.6)],  # Top-right
+                    [int(0.9 * width), height],  # Bottom-right
+                    [int(width * 0.1), height]  # Bottom-left
                 ]])
                 dst = np.float32([[
-                    [0, 0],
-                    [width, 0],
-                    [width, height],
-                    [0, height]
+                    [0, 0],  # Top-left
+                    [width, 0],  # Top-right
+                    [width, height],  # Bottom-right
+                    [0, height]  # Bottom-left
                 ]])
                 warped_size = (width, height)
 
@@ -201,6 +201,11 @@ class LaneDetection:
 
                 # Display the result
                 cv2.imshow("Lane Detection", result)
+
+                # Debug: Display intermediate results
+                cv2.imshow("Preprocessed Image", processed_img)
+                cv2.imshow("Warped Image", warped_img)
+                cv2.waitKey(1)
 
                 # Press 'q' to exit
                 if cv2.waitKey(1) & 0xFF == ord('q'):
