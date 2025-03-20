@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import matplotlib.pyplot as plt
 
 class LaneDetection:
     def __init__(self):
@@ -63,21 +64,34 @@ class LaneDetection:
                 cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 10)
         return cv2.addWeighted(image, 0.8, line_image, 1, 0)
 
-    def run(self):
-        print("Press 'q' to stop.")
+def run(self):
+    print("Press 'q' to stop.")
+    self.px.forward(0)  # Ensure wheels stay still
 
-        while True:
-            ret, frame = self.camera.read()
-            if not ret:
-                break
-            processed_frame = self.follow_lane(frame)
-            cv2.imshow('Lane Detection', processed_frame)
+    plt.ion()  # Enable interactive mode
+    fig, ax = plt.subplots()
+    im_display = ax.imshow(np.zeros((240, 320, 3), dtype=np.uint8))
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+    while True:
+        ret, frame = self.camera.read()
+        if not ret:
+            print("Failed to capture frame. Stopping the car.")
+            self.px.forward(0)
+            break
+        
+        processed_frame = self.follow_lane(frame)
+        im_display.set_data(processed_frame)
+        plt.pause(0.01)  # Pause for a brief moment to update the display
+        
+        if plt.waitforbuttonpress(0.01):  # Stop if any key is pressed
+            print("Stopping the car.")
+            self.px.forward(0)
+            break
 
-        self.camera.release()
-        cv2.destroyAllWindows()
+    self.camera.release()
+    plt.ioff()
+    plt.close()
+
 
 if __name__ == '__main__':
     LaneDetection().run()
