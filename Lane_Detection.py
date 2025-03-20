@@ -40,7 +40,7 @@ class LaneDetection:
         """
         M = cv2.getPerspectiveTransform(src, dst)
         warped = cv2.warpPerspective(img, M, size)
-        return warped
+        return warped, M
 
     def sliding_window_search(self, binary_warped):
         """
@@ -100,26 +100,45 @@ class LaneDetection:
 
         return left_fit, right_fit
 
+    def find_points(self, img_shape, left_fit, right_fit):
+        """
+        Finds the points for the left and right lanes.
+        """
+        ploty = np.linspace(0, img_shape[0] - 1, img_shape[0])
+        left_fitx = left_fit[0] * ploty**2 + left_fit[1] * ploty + left_fit[2]
+        right_fitx = right_fit[0] * ploty**2 + right_fit[1] * ploty + right_fit[2]
+        pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+        pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+        return pts_left, pts_right
+
+    def fill_lane(self, img_shape, pts_left, pts_right):
+        """
+        Fills the space between the detected lanes.
+        """
+        pts = np.hstack((pts_left, pts_right))
+        img = np.zeros((img_shape[0], img_shape[1], 3), dtype=np.uint8)
+        cv2.fillPoly(img, np.int_([pts]), (0, 255, 0))
+        return img
+
     def draw_lane_lines(self, img, left_fit, right_fit, src, dst, size):
         """
-        Draws the detected lane lines on the image.
+        Draws the detected lane lines and fills the space between them.
         """
         if left_fit is None or right_fit is None:
             return img  # Skip drawing if no lanes are detected
 
-        ploty = np.linspace(0, size[1] - 1, size[1])
-        left_fitx = left_fit[0] * ploty**2 + left_fit[1] * ploty + left_fit[2]
-        right_fitx = right_fit[0] * ploty**2 + right_fit[1] * ploty + right_fit[2]
+        # Find points for the left and right lanes
+        pts_left, pts_right = self.find_points(size, left_fit, right_fit)
 
-        warp_zero = np.zeros((size[1], size[0], 3), dtype=np.uint8)
-        pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
-        pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
-        pts = np.hstack((pts_left, pts_right))
+        # Fill the space between the lanes
+        filled_lane = self.fill_lane(size, pts_left, pts_right)
 
-        cv2.fillPoly(warp_zero, np.int_([pts]), (0, 255, 0))
+        # Warp the filled lane back to the original perspective
         M_inv = cv2.getPerspectiveTransform(dst, src)
-        newwarp = cv2.warpPerspective(warp_zero, M_inv, (img.shape[1], img.shape[0]))
-        result = cv2.addWeighted(img, 1, newwarp, 0.3, 0)
+        filled_lane_unwarped = cv2.warpPerspective(filled_lane, M_inv, (img.shape[1], img.shape[0]))
+
+        # Overlay the filled lane on the original image
+        result = cv2.addWeighted(img, 1, filled_lane_unwarped, 0.3, 0)
         return result
 
     def run(self):
@@ -166,7 +185,7 @@ class LaneDetection:
                 warped_size = (width, height)
 
                 # Apply perspective transform
-                warped_img = self.perspective_transform(masked_img, src, dst, warped_size)
+                warped_img, M = self.perspective_transform(masked_img, src, dst, warped_size)
 
                 # Detect lanes using sliding window search
                 left_fit, right_fit = self.sliding_window_search(warped_img)
@@ -177,7 +196,7 @@ class LaneDetection:
                 else:
                     self.left_fit, self.right_fit = left_fit, right_fit  # Update previous fit
 
-                # Draw lane lines on the original image
+                # Draw lane lines and fill the space between them
                 result = self.draw_lane_lines(frame, left_fit, right_fit, src, dst, warped_size)
 
                 # Display the result
