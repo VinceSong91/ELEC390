@@ -11,12 +11,12 @@ camera = cv2.VideoCapture(0)  # Use 0 for the default camera
 def nothing(x):
     pass
 
+# Create trackbars for adjusting HSV thresholds
 cv2.namedWindow("Trackbars")
-
-cv2.createTrackbar("L - H", "Trackbars", 0, 255, nothing)
-cv2.createTrackbar("L - S", "Trackbars", 0, 255, nothing)
-cv2.createTrackbar("L - V", "Trackbars", 200, 255, nothing)
-cv2.createTrackbar("U - H", "Trackbars", 255, 255, nothing)
+cv2.createTrackbar("L - H", "Trackbars", 0, 179, nothing)  # Hue range is 0-179
+cv2.createTrackbar("L - S", "Trackbars", 0, 255, nothing)  # Saturation range is 0-255
+cv2.createTrackbar("L - V", "Trackbars", 200, 255, nothing)  # Value range is 0-255
+cv2.createTrackbar("U - H", "Trackbars", 179, 179, nothing)
 cv2.createTrackbar("U - S", "Trackbars", 50, 255, nothing)
 cv2.createTrackbar("U - V", "Trackbars", 255, 255, nothing)
 
@@ -49,9 +49,10 @@ while True:
     transformed_frame = cv2.warpPerspective(frame, matrix, (640, 480))
 
     ### Object Detection
-    # Image Thresholding
+    # Convert the transformed frame to HSV color space
     hsv_transformed_frame = cv2.cvtColor(transformed_frame, cv2.COLOR_BGR2HSV)
 
+    # Get current positions of the trackbars
     l_h = cv2.getTrackbarPos("L - H", "Trackbars")
     l_s = cv2.getTrackbarPos("L - S", "Trackbars")
     l_v = cv2.getTrackbarPos("L - V", "Trackbars")
@@ -59,11 +60,17 @@ while True:
     u_s = cv2.getTrackbarPos("U - S", "Trackbars")
     u_v = cv2.getTrackbarPos("U - V", "Trackbars")
 
+    # Define the lower and upper bounds for the color thresholding
     lower = np.array([l_h, l_s, l_v])
     upper = np.array([u_h, u_s, u_v])
+
+    # Create a mask using the HSV range
     mask = cv2.inRange(hsv_transformed_frame, lower, upper)
 
-    # Histogram
+    # Apply the mask to the transformed frame
+    masked_frame = cv2.bitwise_and(transformed_frame, transformed_frame, mask=mask)
+
+    # Histogram to find lane positions
     histogram = np.sum(mask[mask.shape[0] // 2:, :], axis=0)
     midpoint = int(histogram.shape[0] / 2)
     left_base = np.argmax(histogram[:midpoint])
@@ -106,7 +113,8 @@ while True:
     # Display frames
     cv2.imshow("Original", frame)
     cv2.imshow("Bird's Eye View", transformed_frame)
-    cv2.imshow("Lane Detection - Image Thresholding", mask)
+    cv2.imshow("Lane Detection - Mask", mask)
+    cv2.imshow("Lane Detection - Masked Frame", masked_frame)
     cv2.imshow("Lane Detection - Sliding Windows", msk)
 
     # Exit on 'ESC' key press
