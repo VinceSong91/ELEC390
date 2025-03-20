@@ -45,39 +45,45 @@ class LaneDetection:
         # Take a histogram of the bottom half of the image
         histogram = np.sum(binary_warped[binary_warped.shape[0] // 2:, :], axis=0)
         midpoint = histogram.shape[0] // 2
-        leftx_base = np.argmax(histogram[:midpoint])
-        rightx_base = np.argmax(histogram[midpoint:]) + midpoint
+        leftx_base = np.argmax(histogram[:midpoint])  # Starting x-position for the left lane
+        rightx_base = np.argmax(histogram[midpoint:]) + midpoint  # Starting x-position for the right lane
 
         # Create an output image to visualize the result
         out_img = np.dstack((binary_warped, binary_warped, binary_warped)) * 255
 
         # Set up sliding windows
-        nwindows = 9
-        margin = 100
-        minpix = 50
-        window_height = binary_warped.shape[0] // nwindows
+        nwindows = 9  # Number of sliding windows
+        margin = 100  # Width of the windows
+        minpix = 50  # Minimum number of pixels to recenter the window
+        window_height = binary_warped.shape[0] // nwindows  # Height of each window
+
+        # Identify all nonzero pixels in the image
         nonzero = binary_warped.nonzero()
-        nonzeroy = np.array(nonzero[0])
-        nonzerox = np.array(nonzero[1])
+        nonzeroy = np.array(nonzero[0])  # y-coordinates of nonzero pixels
+        nonzerox = np.array(nonzero[1])  # x-coordinates of nonzero pixels
+
+        # Current positions to be updated for each window
         leftx_current = leftx_base
         rightx_current = rightx_base
+
+        # Lists to store lane pixel indices
         left_lane_inds = []
         right_lane_inds = []
 
         for window in range(nwindows):
             # Identify window boundaries
-            win_y_low = binary_warped.shape[0] - (window + 1) * window_height
-            win_y_high = binary_warped.shape[0] - window * window_height
-            win_xleft_low = leftx_current - margin
-            win_xleft_high = leftx_current + margin
-            win_xright_low = rightx_current - margin
-            win_xright_high = rightx_current + margin
+            win_y_low = binary_warped.shape[0] - (window + 1) * window_height  # Bottom of the window
+            win_y_high = binary_warped.shape[0] - window * window_height  # Top of the window
+            win_xleft_low = leftx_current - margin  # Left boundary of the left window
+            win_xleft_high = leftx_current + margin  # Right boundary of the left window
+            win_xright_low = rightx_current - margin  # Left boundary of the right window
+            win_xright_high = rightx_current + margin  # Right boundary of the right window
 
             # Draw the windows on the visualization image
             cv2.rectangle(out_img, (win_xleft_low, win_y_low), (win_xleft_high, win_y_high), (0, 255, 0), 2)
             cv2.rectangle(out_img, (win_xright_low, win_y_low), (win_xright_high, win_y_high), (0, 255, 0), 2)
 
-            # Identify the nonzero pixels in the window
+            # Identify nonzero pixels within the window
             good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
                              (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
             good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
@@ -87,7 +93,7 @@ class LaneDetection:
             left_lane_inds.append(good_left_inds)
             right_lane_inds.append(good_right_inds)
 
-            # If found > minpix pixels, recenter next window
+            # If enough pixels are found, recenter the window
             if len(good_left_inds) > minpix:
                 leftx_current = int(np.mean(nonzerox[good_left_inds]))
             if len(good_right_inds) > minpix:
@@ -97,21 +103,21 @@ class LaneDetection:
         left_lane_inds = np.concatenate(left_lane_inds) if left_lane_inds else np.array([], dtype=np.int64)
         right_lane_inds = np.concatenate(right_lane_inds) if right_lane_inds else np.array([], dtype=np.int64)
 
-        # Extract left and right line pixel positions
+        # Extract left and right lane pixel positions
         leftx = nonzerox[left_lane_inds]
         lefty = nonzeroy[left_lane_inds]
         rightx = nonzerox[right_lane_inds]
         righty = nonzeroy[right_lane_inds]
 
-        # Visualize the sliding windows
-        out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
-        out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+        # Visualize the sliding windows and detected lane pixels
+        out_img[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]  # Red for left lane
+        out_img[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]  # Blue for right lane
         cv2.imshow("Sliding Windows", out_img)
 
         if len(leftx) == 0 or len(rightx) == 0:
             return None, None  # Return None if no lanes are detected
 
-        # Fit a second-order polynomial to each lane
+        # Fit a second-order polynomial to the lane pixels
         left_fit = np.polyfit(lefty, leftx, 2)
         right_fit = np.polyfit(righty, rightx, 2)
 
@@ -191,7 +197,7 @@ class LaneDetection:
 
                 # Debug: Display intermediate results
                 cv2.imshow("Preprocessed Image", processed_img)
-                cv2.imshow("Warped Image", masked_img)
+                cv2.imshow("ROI Mask", masked_img)
                 cv2.waitKey(1)
 
                 # Press 'q' to exit
