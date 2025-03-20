@@ -1,70 +1,66 @@
 import cv2
 import numpy as np
-from picarx import Picarx
 
-class MyHandCodedLaneFollower:
-    def __init__(self, car):
-        self.car = car
-        self.curr_steering_angle = 90  # Straight
+def region_of_interest(image):
+    height, width = image.shape[:2]
+    mask = np.zeros_like(image)
 
-    def follow_lane(self, frame):
-        lane_lines = self.detect_lane(frame)
-        if lane_lines is not None:
-            steering_angle = self.compute_steering_angle(frame, lane_lines)
-            self.car.set_dir_servo_angle(steering_angle)
-        return frame
+    # Define region for lane detection (trapezoid shape)
+    polygons = np.array([
+        [(0, height), (width, height), (width//2, height//2)]
+    ])
 
-    def detect_lane(self, frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        edges = cv2.Canny(blur, 50, 150)
+    cv2.fillPoly(mask, polygons, 255)
+    return cv2.bitwise_and(image, mask)
 
-        mask = np.zeros_like(edges)
-        height, width = edges.shape
-        region = np.array([[(0, height), (width, height), (width // 2, height // 2)]]);
-        cv2.fillPoly(mask, region, 255)
-
-        masked_edges = cv2.bitwise_and(edges, mask)
-
-        # Hough Transform to find lanes
-        lines = cv2.HoughLinesP(masked_edges, 1, np.pi / 180, 50, minLineLength=50, maxLineGap=200)
-        return lines
-
-    def compute_steering_angle(self, frame, lines):
-        left_fit = []
-        right_fit = []
-        height, width, _ = frame.shape
-        mid_x = width // 2
-
+def draw_lines(image, lines):
+    line_image = np.zeros_like(image)
+    if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]
-            slope = (y2 - y1) / (x2 - x1 + 0.0001)
-            if abs(slope) < 0.5:  # Ignore horizontal lines
-                continue
-            if slope < 0:  # Left lane
-                left_fit.append((slope, y1 - slope * x1))
-            else:  # Right lane
-                right_fit.append((slope, y1 - slope * x1))
+            cv2.line(line_image, (x1, y1), (x2, y2), (0, 255, 0), 5)
+    return line_image
 
-        # Calculate average slopes and intercepts
-        if left_fit:
-            left_fit_average = np.average(left_fit, axis=0)
-        else:
-            left_fit_average = None
-        if right_fit:
-            right_fit_average = np.average(right_fit, axis=0)
-        else:
-            right_fit_average = None
+def process_frame(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(blur, 50, 150)
 
-        # Determine steering angle
-        if left_fit_average is not None and right_fit_average is not None:
-            mid_lane_x = (left_fit_average[1] + right_fit_average[1]) / 2
-        elif left_fit_average is not None:
-            mid_lane_x = left_fit_average[1]
-        elif right_fit_average is not None:
-            mid_lane_x = right_fit_average[1]
-        else:
-            return 90  # Keep straight if no lane detected
+    roi = region_of_interest(edges)
 
-        steering_angle = 90 + (mid_lane_x - mid_x) / width * 90
-        return int(np.clip(steering_angle, 45, 135))
+    lines = cv2.HoughLinesP(
+        roi, 1, np.pi / 180, 50, minLineLength=50, maxLineGap=150
+    )
+
+    line_image = draw_lines(frame, lines)
+    combined = cv2.addWeighted(frame, 0.8, line_image, 1, 1)
+
+    return combined
+
+def main():
+    cap = cv2.VideoCapture(-1)  # Use default camera
+    cap.set(3, 320)  # Width
+    cap.set(4, 240)  # Height
+
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
+        return
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("Failed to capture frame")
+            break
+
+        processed_frame = process_frame(frame)
+
+        cv2.imshow("Lane Detection", processed_frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main()
