@@ -110,4 +110,10 @@ class LaneDetection:
                     break
         except Exception as e:
             print(f"Error: {e}")
-        finally
+        finally:
+            print("Cleaning up resources.")
+            self.camera.release()
+            cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    LaneDetection().run()
