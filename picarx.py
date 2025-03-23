@@ -1,263 +1,141 @@
-from robot_hat import Pin, ADC, PWM, Servo, fileDB
-from robot_hat import Grayscale_Module, Ultrasonic, utils
+import cv2
+import numpy as np
+from picarx import Picarx
 import time
-import os
 
+class LaneDetection:
+    def __init__(self):
+        self.camera = cv2.VideoCapture(-1)  # Use -1 for default camera
+        self.camera.set(3, 640)  # Set width to 640
+        self.camera.set(4, 480)  # Set height to 480
 
-def constrain(x, min_val, max_val):
-    '''
-    Constrains value to be within a range.
-    '''
-    return max(min_val, min(max_val, x))
+    def perspective_transform(self, image):
+        height, width = image.shape[:2]
+        # Define source and destination points for the transform
+        src = np.float32([
+            [width * 0.2, height * 0.8],  # Bottom-left
+            [width * 0.8, height * 0.8],  # Bottom-right
+            [width * 0.7, height * 0.5],  # Top-right
+            [width * 0.3, height * 0.5]   # Top-left
+        ])
+        dst = np.float32([
+            [width * 0.1, height],  # Bottom-left
+            [width * 0.9, height],  # Bottom-right
+            [width * 0.9, 0],      # Top-right
+            [width * 0.1, 0]       # Top-left
+        ])
+        # Compute the perspective transform matrix
+        M = cv2.getPerspectiveTransform(src, dst)
+        # Warp the image
+        warped = cv2.warpPerspective(image, M, (width, height), flags=cv2.INTER_LINEAR)
+        return warped, M
 
-class Picarx(object):
-    CONFIG = '/opt/picar-x/picar-x.conf'
+    def detect_lanes(self, image):
+        # Convert to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        # Apply Gaussian blur
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        # Detect edges using Canny
+        edges = cv2.Canny(blur, 50, 150)
+        # Apply perspective transform
+        warped, _ = self.perspective_transform(edges)
+        # Use sliding windows to detect lanes
+        histogram = np.sum(warped[warped.shape[0] // 2:, :], axis=0)
+        midpoint = histogram.shape[0] // 2
+        leftx_base = np.argmax(histogram[:midpoint])
+        rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
-    DEFAULT_LINE_REF = [1000, 1000, 1000]
-    DEFAULT_CLIFF_REF = [500, 500, 500]
+        # Set up sliding windows
+        nwindows = 9
+        window_height = warped.shape[0] // nwindows
+        nonzero = warped.nonzero()
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        leftx_current = leftx_base
+        rightx_current = rightx_base
+        margin = 100
+        minpix = 50
+        left_lane_inds = []
+        right_lane_inds = []
 
-    DIR_MIN = -30
-    DIR_MAX = 30
-    CAM_PAN_MIN = -90
-    CAM_PAN_MAX = 90
-    CAM_TILT_MIN = -35
-    CAM_TILT_MAX = 65
+        for window in range(nwindows):
+            win_y_low = warped.shape[0] - (window + 1) * window_height
+            win_y_high = warped.shape[0] - window * window_height
+            win_xleft_low = leftx_current - margin
+            win_xleft_high = leftx_current + margin
+            win_xright_low = rightx_current - margin
+            win_xright_high = rightx_current + margin
 
-    PERIOD = 4095
-    PRESCALER = 10
-    TIMEOUT = 0.02
+            good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
+                              (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
+            good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
+                               (nonzerox >= win_xright_low) & (nonzerox < win_xright_high)).nonzero()[0]
 
-    # servo_pins: camera_pan_servo, camera_tilt_servo, direction_servo
-    # motor_pins: left_swicth, right_swicth, left_pwm, right_pwm
-    # grayscale_pins: 3 adc channels
-    # ultrasonic_pins: trig, echo2
-    # config: path of config file
-    def __init__(self, 
-                servo_pins:list=['P0', 'P1', 'P2'], 
-                motor_pins:list=['D4', 'D5', 'P13', 'P12'],
-                grayscale_pins:list=['A0', 'A1', 'A2'],
-                ultrasonic_pins:list=['D2','D3'],
-                config:str=CONFIG,
-                ):
+            left_lane_inds.append(good_left_inds)
+            right_lane_inds.append(good_right_inds)
 
-        # reset robot_hat
-        utils.reset_mcu()
-        time.sleep(0.2)
+            if len(good_left_inds) > minpix:
+                leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
+            if len(good_right_inds) > minpix:
+                rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
 
-        # --------- config_flie ---------
-        self.config_flie = fileDB(config, 777, os.getlogin())
+        left_lane_inds = np.concatenate(left_lane_inds)
+        right_lane_inds = np.concatenate(right_lane_inds)
 
-        # --------- servos init ---------
-        self.cam_pan = Servo(servo_pins[0])
-        self.cam_tilt = Servo(servo_pins[1])   
-        self.dir_servo_pin = Servo(servo_pins[2])
-        # get calibration values
-        self.dir_cali_val = float(self.config_flie.get("picarx_dir_servo", default_value=0))
-        self.cam_pan_cali_val = float(self.config_flie.get("picarx_cam_pan_servo", default_value=0))
-        self.cam_tilt_cali_val = float(self.config_flie.get("picarx_cam_tilt_servo", default_value=0))
-        # set servos to init angle
-        self.dir_servo_pin.angle(self.dir_cali_val)
-        self.cam_pan.angle(self.cam_pan_cali_val)
-        self.cam_tilt.angle(self.cam_tilt_cali_val)
+        leftx = nonzerox[left_lane_inds]
+        lefty = nonzeroy[left_lane_inds]
+        rightx = nonzerox[right_lane_inds]
+        righty = nonzeroy[right_lane_inds]
 
-        # --------- motors init ---------
-        self.left_rear_dir_pin = Pin(motor_pins[0])
-        self.right_rear_dir_pin = Pin(motor_pins[1])
-        self.left_rear_pwm_pin = PWM(motor_pins[2])
-        self.right_rear_pwm_pin = PWM(motor_pins[3])
-        self.motor_direction_pins = [self.left_rear_dir_pin, self.right_rear_dir_pin]
-        self.motor_speed_pins = [self.left_rear_pwm_pin, self.right_rear_pwm_pin]
-        # get calibration values
-        self.cali_dir_value = self.config_flie.get("picarx_dir_motor", default_value="[1, 1]")
-        self.cali_dir_value = [int(i.strip()) for i in self.cali_dir_value.strip().strip("[]").split(",")]
-        self.cali_speed_value = [0, 0]
-        self.dir_current_angle = 0
-        # init pwm
-        for pin in self.motor_speed_pins:
-            pin.period(self.PERIOD)
-            pin.prescaler(self.PRESCALER)
+        # Fit a second-order polynomial to the lane lines
+        left_fit = np.polyfit(lefty, leftx, 2)
+        right_fit = np.polyfit(righty, rightx, 2)
 
-        # --------- grayscale module init ---------
-        adc0, adc1, adc2 = [ADC(pin) for pin in grayscale_pins]
-        self.grayscale = Grayscale_Module(adc0, adc1, adc2, reference=None)
-        # get reference
-        self.line_reference = self.config_flie.get("line_reference", default_value=str(self.DEFAULT_LINE_REF))
-        self.line_reference = [float(i) for i in self.line_reference.strip().strip('[]').split(',')]
-        self.cliff_reference = self.config_flie.get("cliff_reference", default_value=str(self.DEFAULT_CLIFF_REF))
-        self.cliff_reference = [float(i) for i in self.cliff_reference.strip().strip('[]').split(',')]
-        # transfer reference
-        self.grayscale.reference(self.line_reference)
+        # Generate x and y values for plotting
+        ploty = np.linspace(0, warped.shape[0] - 1, warped.shape[0])
+        left_fitx = left_fit[0] * ploty**2 + left_fit[1] * ploty + left_fit[2]
+        right_fitx = right_fit[0] * ploty**2 + right_fit[1] * ploty + right_fit[2]
 
-        # --------- ultrasonic init ---------
-        trig, echo= ultrasonic_pins
-        self.ultrasonic = Ultrasonic(Pin(trig), Pin(echo, mode=Pin.IN, pull=Pin.PULL_DOWN))
-        
-    def set_motor_speed(self, motor, speed):
-        ''' set motor speed
-        
-        param motor: motor index, 1 means left motor, 2 means right motor
-        type motor: int
-        param speed: speed
-        type speed: int      
-        '''
-        speed = constrain(speed, -100, 100)
-        motor -= 1
-        if speed >= 0:
-            direction = 1 * self.cali_dir_value[motor]
-        elif speed < 0:
-            direction = -1 * self.cali_dir_value[motor]
-        speed = abs(speed)
-        # print(f"direction: {direction}, speed: {speed}")
-        if speed != 0:
-            speed = int(speed /2 ) + 50
-        speed = speed - self.cali_speed_value[motor]
-        if direction < 0:
-            self.motor_direction_pins[motor].high()
-            self.motor_speed_pins[motor].pulse_width_percent(speed)
-        else:
-            self.motor_direction_pins[motor].low()
-            self.motor_speed_pins[motor].pulse_width_percent(speed)
+        # Calculate the center of the lane
+        lane_center = (left_fitx[-1] + right_fitx[-1]) // 2
+        frame_center = warped.shape[1] // 2
+        deviation = lane_center - frame_center
 
-    def motor_speed_calibration(self, value):
-        self.cali_speed_value = value
-        if value < 0:
-            self.cali_speed_value[0] = 0
-            self.cali_speed_value[1] = abs(self.cali_speed_value)
-        else:
-            self.cali_speed_value[0] = abs(self.cali_speed_value)
-            self.cali_speed_value[1] = 0
+        return deviation
 
-    def motor_direction_calibrate(self, motor, value):
-        ''' set motor direction calibration value
-        
-        param motor: motor index, 1 means left motor, 2 means right motor
-        type motor: int
-        param value: speed
-        type value: int
-        '''      
-        motor -= 1
-        if value == 1:
-            self.cali_dir_value[motor] = 1
-        elif value == -1:
-            self.cali_dir_value[motor] = -1
-        self.config_flie.set("picarx_dir_motor", self.cali_dir_value)
+    def run(self, px):
+        while True:
+            ret, frame = self.camera.read()
+            if not ret:
+                print("Failed to grab frame")
+                break
 
-    def dir_servo_calibrate(self, value):
-        self.dir_cali_val = value
-        self.config_flie.set("picarx_dir_servo", "%s"%value)
-        self.dir_servo_pin.angle(value)
+            # Process the frame to detect lanes
+            deviation = self.detect_lanes(frame)
 
-    def set_dir_servo_angle(self, value):
-        self.dir_current_angle = constrain(value, self.DIR_MIN, self.DIR_MAX)
-        angle_value  = self.dir_current_angle + self.dir_cali_val
-        self.dir_servo_pin.angle(angle_value)
+            if deviation is not None:
+                # Adjust steering angle based on deviation
+                steering_angle = -deviation // 10  # Scale deviation to steering angle
+                steering_angle = max(-30, min(30, steering_angle))  # Constrain steering angle
+                px.set_dir_servo_angle(steering_angle)
 
-    def cam_pan_servo_calibrate(self, value):
-        self.cam_pan_cali_val = value
-        self.config_flie.set("picarx_cam_pan_servo", "%s"%value)
-        self.cam_pan.angle(value)
-
-    def cam_tilt_servo_calibrate(self, value):
-        self.cam_tilt_cali_val = value
-        self.config_flie.set("picarx_cam_tilt_servo", "%s"%value)
-        self.cam_tilt.angle(value)
-
-    def set_cam_pan_angle(self, value):
-        value = constrain(value, self.CAM_PAN_MIN, self.CAM_PAN_MAX)
-        self.cam_pan.angle(-1*(value + -1*self.cam_pan_cali_val))
-
-    def set_cam_tilt_angle(self,value):
-        value = constrain(value, self.CAM_TILT_MIN, self.CAM_TILT_MAX)
-        self.cam_tilt.angle(-1*(value + -1*self.cam_tilt_cali_val))
-
-    def set_power(self, speed):
-        self.set_motor_speed(1, speed)
-        self.set_motor_speed(2, speed)
-
-    def backward(self, speed):
-        current_angle = self.dir_current_angle
-        if current_angle != 0:
-            abs_current_angle = abs(current_angle)
-            if abs_current_angle > self.DIR_MAX:
-                abs_current_angle = self.DIR_MAX
-            power_scale = (100 - abs_current_angle) / 100.0 
-            if (current_angle / abs_current_angle) > 0:
-                self.set_motor_speed(1, -1*speed)
-                self.set_motor_speed(2, speed * power_scale)
+                # Move forward
+                px.forward(30)
             else:
-                self.set_motor_speed(1, -1*speed * power_scale)
-                self.set_motor_speed(2, speed )
-        else:
-            self.set_motor_speed(1, -1*speed)
-            self.set_motor_speed(2, speed)  
+                # Stop if no lanes are detected
+                px.stop()
 
-    def forward(self, speed):
-        current_angle = self.dir_current_angle
-        if current_angle != 0:
-            abs_current_angle = abs(current_angle)
-            if abs_current_angle > self.DIR_MAX:
-                abs_current_angle = self.DIR_MAX
-            power_scale = (100 - abs_current_angle) / 100.0
-            if (current_angle / abs_current_angle) > 0:
-                self.set_motor_speed(1, 1*speed * power_scale)
-                self.set_motor_speed(2, -speed) 
-            else:
-                self.set_motor_speed(1, speed)
-                self.set_motor_speed(2, -1*speed * power_scale)
-        else:
-            self.set_motor_speed(1, speed)
-            self.set_motor_speed(2, -1*speed)                  
+            # Display the frame
+            cv2.imshow('Lane Detection', frame)
 
-    def stop(self):
-        '''
-        Execute twice to make sure it stops
-        '''
-        for _ in range(2):
-            self.motor_speed_pins[0].pulse_width_percent(0)
-            self.motor_speed_pins[1].pulse_width_percent(0)
-            time.sleep(0.002)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-    def get_distance(self):
-        return self.ultrasonic.read()
+        self.camera.release()
+        cv2.destroyAllWindows()
+        px.stop()
 
-    def set_grayscale_reference(self, value):
-        if isinstance(value, list) and len(value) == 3:
-            self.line_reference = value
-            self.grayscale.reference(self.line_reference)
-            self.config_flie.set("line_reference", self.line_reference)
-        else:
-            raise ValueError("grayscale reference must be a 1*3 list")
-
-    def get_grayscale_data(self):
-        return list.copy(self.grayscale.read())
-
-    def get_line_status(self,gm_val_list):
-        return self.grayscale.read_status(gm_val_list)
-
-    def set_line_reference(self, value):
-        self.set_grayscale_reference(value)
-
-    def get_cliff_status(self,gm_val_list):
-        for i in range(0,3):
-            if gm_val_list[i]<=self.cliff_reference[i]:
-                return True
-        return False
-
-    def set_cliff_reference(self, value):
-        if isinstance(value, list) and len(value) == 3:
-            self.cliff_reference = value
-            self.config_flie.set("cliff_reference", self.cliff_reference)
-        else:
-            raise ValueError("grayscale reference must be a 1*3 list")
-
-    def reset(self):
-        self.stop()
-        self.set_dir_servo_angle(0)
-        self.set_cam_tilt_angle(0)
-        self.set_cam_pan_angle(0)
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     px = Picarx()
-    px.forward(50)
-    time.sleep(1)
-    px.stop()
+    lane_detector = LaneDetection()
+    lane_detector.run(px)
