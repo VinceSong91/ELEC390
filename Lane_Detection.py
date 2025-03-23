@@ -12,17 +12,16 @@ class LaneDetection:
     def perspective_transform(self, image):
         height, width = image.shape[:2]
         # Define source and destination points for the transform
-        # Focus on the lower part of the image (closer to the car)
         src = np.float32([
             [width * 0.1, height * 0.9],  # Bottom-left
             [width * 0.9, height * 0.9],  # Bottom-right
             [width * 0.7, height * 0.6],  # Top-right
-            [width * 0.3, height * 0.6]    # Top-left
+            [width * 0.3, height * 0.6]   # Top-left
         ])
         dst = np.float32([
             [width * 0.1, height],  # Bottom-left
             [width * 0.9, height],  # Bottom-right
-            [width * 0.9, 0],       # Top-right
+            [width * 0.9, 0],      # Top-right
             [width * 0.1, 0]        # Top-left
         ])
         # Compute the perspective transform matrix
@@ -205,10 +204,15 @@ class LaneDetection:
         px.stop()
 
 if __name__ == '__main__':
-    # Initialize Picar-X with corrected servo and motor offsets
+    # Initialize Picar-X with corrected servo and motor calibration
     px = Picarx()
-    px.set_dir_servo_offset(0)  # Reset direction servo offset to 0
-    px.set_motor_offset(1, 1)   # Ensure motors are calibrated correctly
+    
+    # Reset direction servo calibration to 0
+    px.dir_servo_calibrate(0)  # Correct method to set direction servo calibration
+    
+    # Calibrate motor directions (1 for forward, -1 for reverse)
+    px.motor_direction_calibrate(1, 1)  # Left motor
+    px.motor_direction_calibrate(2, 1)  # Right motor
 
     lane_detector = LaneDetection()
     lane_detector.run(px)
