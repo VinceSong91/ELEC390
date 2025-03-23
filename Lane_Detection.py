@@ -1,85 +1,72 @@
 import cv2
 import numpy as np
-from picarx import Picarx
 
-# Initialize PiCar-X
-px = Picarx()
+class LaneDetection:
+    def __init__(self):
+        self.camera = cv2.VideoCapture(-1)
+        self.camera.set(3, 640)
+        self.camera.set(4, 480)
 
-# Initialize PiCar-X camera
-camera = cv2.VideoCapture(0)  # Use 0 for the default camera
+    def region_of_interest(self, image):
+        mask = np.zeros_like(image)
+        height, width = image.shape[:2]
+        polygons = np.array([
+            [(0, height), (width, height), (width//2, height//2)]
+        ])
+        cv2.fillPoly(mask, polygons, (255, 255, 255))
+        return cv2.bitwise_and(image, mask)
 
-while True:
-    # Capture frame from PiCar-X camera
-    success, frame = camera.read()
-    if not success:
-        print("Failed to capture frame from camera.")
-        break
+    def detect_edges(self, image):
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        edges = cv2.Canny(blur, 50, 150)
+        return edges
 
-    frame = cv2.resize(frame, (640, 480))
+    def detect_lines(self, edges, image):
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength=50, maxLineGap=150)
+        left_lines = []
+        right_lines = []
+        middle_lines = []
 
-    ## Choosing points for perspective transformation
-    tl = (222, 387)  # Top-left
-    bl = (70, 472)   # Bottom-left
-    tr = (400, 380)  # Top-right
-    br = (538, 472)  # Bottom-right
+        if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                slope = (y2 - y1) / (x2 - x1 + 1e-6)
 
-    cv2.circle(frame, tl, 5, (0, 0, 255), -1)
-    cv2.circle(frame, bl, 5, (0, 0, 255), -1)
-    cv2.circle(frame, tr, 5, (0, 0, 255), -1)
-    cv2.circle(frame, br, 5, (0, 0, 255), -1)
+                if abs(slope) < 0.3: # Middle yellow line (dotted)
+                    middle_lines.append(line)
+                elif slope < 0: # Left white line
+                    left_lines.append(line)
+                else: # Right white line
+                    right_lines.append(line)
+        
+        self.draw_lines(image, left_lines, (255, 255, 255))  # White for solid outer lines
+        self.draw_lines(image, right_lines, (255, 255, 255))
+        self.draw_lines(image, middle_lines, (0, 255, 255)) # Yellow for the middle line
 
-    ## Applying perspective transformation
-    pts1 = np.float32([tl, bl, tr, br])
-    pts2 = np.float32([[0, 0], [0, 480], [640, 0], [640, 480]])
+    def draw_lines(self, image, lines, color):
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(image, (x1, y1), (x2, y2), color, 5)
 
-    # Matrix to warp the image for birdseye window
-    matrix = cv2.getPerspectiveTransform(pts1, pts2)
-    transformed_frame = cv2.warpPerspective(frame, matrix, (640, 480))
+    def run(self):
+        while True:
+            ret, frame = self.camera.read()
+            if not ret:
+                break
 
-    ### Object Detection
-    # Convert the transformed frame to HSV color space
-    hsv_transformed_frame = cv2.cvtColor(transformed_frame, cv2.COLOR_BGR2HSV)
+            roi = self.region_of_interest(frame)
+            edges = self.detect_edges(roi)
+            self.detect_lines(edges, frame)
 
-    # Define HSV ranges for white and yellow
-    # White lanes
-    lower_white = np.array([0, 0, 200])  # Low H, S, high V
-    upper_white = np.array([179, 30, 255])  # High H, low S, high V
+            cv2.imshow('Lane Detection', frame)
 
-    # Yellow lanes
-    lower_yellow = np.array([20, 100, 100])  # Low H, high S, high V
-    upper_yellow = np.array([30, 255, 255])  # High H, high S, high V
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-    # Create masks for white and yellow
-    mask_white = cv2.inRange(hsv_transformed_frame, lower_white, upper_white)
-    mask_yellow = cv2.inRange(hsv_transformed_frame, lower_yellow, upper_yellow)
+        self.camera.release()
+        cv2.destroyAllWindows()
 
-    # Clean up the masks using morphological operations
-    kernel = np.ones((5, 5), np.uint8)
-    mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_OPEN, kernel)  # Remove noise
-    mask_white = cv2.morphologyEx(mask_white, cv2.MORPH_CLOSE, kernel)  # Fill gaps
-
-    mask_yellow = cv2.morphologyEx(mask_yellow, cv2.MORPH_OPEN, kernel)  # Remove noise
-    mask_yellow = cv2.morphologyEx(mask_yellow, cv2.MORPH_CLOSE, kernel)  # Fill gaps
-
-    # Combine masks (optional, if you want a single mask for both lanes)
-    mask_combined = cv2.bitwise_or(mask_white, mask_yellow)
-
-    # Apply the masks to the transformed frame
-    masked_white = cv2.bitwise_and(transformed_frame, transformed_frame, mask=mask_white)
-    masked_yellow = cv2.bitwise_and(transformed_frame, transformed_frame, mask=mask_yellow)
-
-    # Display frames for debugging
-    cv2.imshow("Original", frame)
-    cv2.imshow("Bird's Eye View", transformed_frame)
-    cv2.imshow("HSV Transformed", hsv_transformed_frame)
-    cv2.imshow("White Lane Mask", mask_white)
-    cv2.imshow("Yellow Lane Mask", mask_yellow)
-    cv2.imshow("Combined Mask", mask_combined)
-
-    # Exit on 'ESC' key press
-    if cv2.waitKey(10) == 27:
-        break
-
-# Release the camera and close all OpenCV windows
-camera.release()
-cv2.destroyAllWindows()
+if __name__ == '__main__':
+    lane_detector = LaneDetection()
+    lane_detector.run()
