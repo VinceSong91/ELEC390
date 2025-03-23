@@ -112,33 +112,26 @@ class LaneDetection:
         height, width, _ = frame.shape
         ploty = np.linspace(0, height - 1, height)
 
-        # Create an empty image to draw the lanes
-        warp_zero = np.zeros_like(frame[:, :, 0]).astype(np.uint8)
-        color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+        # Warp the blank back to original image space using inverse perspective matrix (Minv)
+        _, Minv = self.perspective_transform(frame)
 
-        # Recast the x and y points into usable format for cv2.fillPoly
+        # Draw the left and right lane lines
         pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
         pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
         pts = np.hstack((pts_left, pts_right))
 
-        # Draw the lane onto the warped blank image
-        cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
-
-        # Warp the blank back to original image space using inverse perspective matrix (Minv)
-        _, Minv = self.perspective_transform(frame)
-        newwarp = cv2.warpPerspective(color_warp, Minv, (width, height))
-
-        # Combine the result with the original image
-        result = cv2.addWeighted(frame, 1, newwarp, 0.3, 0)
+        # Draw the lane lines on the frame
+        cv2.polylines(frame, [np.int32(pts_left)], isClosed=False, color=(0, 255, 0), thickness=5)
+        cv2.polylines(frame, [np.int32(pts_right)], isClosed=False, color=(0, 255, 0), thickness=5)
 
         # Draw the steering direction
         center_x = width // 2
         center_y = height
         end_x = center_x + int(100 * np.sin(np.radians(steering_angle)))
         end_y = center_y - int(100 * np.cos(np.radians(steering_angle)))
-        cv2.arrowedLine(result, (center_x, center_y), (end_x, end_y), (0, 0, 255), 5)
+        cv2.arrowedLine(frame, (center_x, center_y), (end_x, end_y), (0, 0, 255), 5)
 
-        return result
+        return frame
 
     def run(self, px):
         while True:
@@ -155,6 +148,9 @@ class LaneDetection:
                 steering_angle = -deviation // 10  # Scale deviation to steering angle
                 steering_angle = max(-30, min(30, steering_angle))  # Constrain steering angle
                 px.set_dir_servo_angle(steering_angle)
+
+                # Pan the camera to follow the steering direction
+                px.set_cam_pan_angle(steering_angle // 2)  # Adjust the camera pan angle
 
                 # Move forward
                 px.forward(30)
