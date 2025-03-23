@@ -13,16 +13,16 @@ class LaneDetection:
         height, width = image.shape[:2]
         # Define source and destination points for the transform
         src = np.float32([
-            [width * 0.4, height * 0.6],
-            [width * 0.6, height * 0.6],
-            [width * 0.9, height],
-            [width * 0.1, height]
+            [width * 0.2, height * 0.8],  # Bottom-left
+            [width * 0.8, height * 0.8],  # Bottom-right
+            [width * 0.7, height * 0.5],  # Top-right
+            [width * 0.3, height * 0.5]   # Top-left
         ])
         dst = np.float32([
-            [width * 0.1, 0],
-            [width * 0.9, 0],
-            [width * 0.9, height],
-            [width * 0.1, height]
+            [width * 0.1, height],  # Bottom-left
+            [width * 0.9, height],  # Bottom-right
+            [width * 0.9, 0],      # Top-right
+            [width * 0.1, 0]       # Top-left
         ])
         # Compute the perspective transform matrix
         M = cv2.getPerspectiveTransform(src, dst)
@@ -118,6 +118,10 @@ class LaneDetection:
                 steering_angle = -deviation // 10  # Scale deviation to steering angle
                 steering_angle = max(-30, min(30, steering_angle))  # Constrain steering angle
                 px.set_dir_servo_angle(steering_angle)
+
+                # Adjust camera pan and tilt for better lane visibility
+                px.set_cam_pan_angle(steering_angle // 2)  # Pan the camera slightly
+                px.set_cam_tilt_angle(-10)  # Tilt the camera downward
 
                 # Move forward
                 px.forward(30)
