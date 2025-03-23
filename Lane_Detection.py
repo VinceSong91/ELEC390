@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from picarx import Picarx  # Import the PiCar-X library
+import time
 
 # Initialize PiCar-X
 px = Picarx()
@@ -57,7 +58,7 @@ def detect_lanes(frame):
     return frame, right_lines
 
 # Function to adjust wheel steering and camera tilt based on the right lane
-def follow_right_lane(right_lines):
+def follow_right_lane(right_lines, last_reset_time):
     if right_lines:
         # Calculate the average x-position of the right lane
         right_lane_pos = np.mean([line[0] for line in right_lines])
@@ -78,13 +79,26 @@ def follow_right_lane(right_lines):
         
         # Move forward
         px.forward(50)
+        
+        # Periodic wheel reset to correct drift
+        current_time = time.time()
+        if current_time - last_reset_time >= 1.0:  # Reset every 1 second
+            px.set_dir_servo_angle(20)  # Turn wheels to the right
+            time.sleep(0.1)  # Hold for a short duration
+            px.set_dir_servo_angle(steering_angle)  # Return to normal steering angle
+            last_reset_time = current_time  # Update the last reset time
     else:
         # No right lane detected, stop the car
         px.stop()
         print("No right lane detected! Stopping the car.")
+    
+    return last_reset_time
 
 # Capture video from the PiCar-X camera
 cap = cv2.VideoCapture(0)  # Use 0 for the default camera
+
+# Initialize last reset time
+last_reset_time = time.time()
 
 while True:
     ret, frame = cap.read()
@@ -95,7 +109,7 @@ while True:
     output_frame, right_lines = detect_lanes(frame)
     
     # Follow the right lane
-    follow_right_lane(right_lines)
+    last_reset_time = follow_right_lane(right_lines, last_reset_time)
     
     # Display the output
     cv2.imshow("Lane Detection", output_frame)
