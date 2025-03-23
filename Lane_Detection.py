@@ -9,112 +9,99 @@ class LaneDetection:
         self.camera.set(3, 640)  # Set width to 640
         self.camera.set(4, 480)  # Set height to 480
 
-    def region_of_interest(self, image):
+    def perspective_transform(self, image):
         height, width = image.shape[:2]
-        mask = np.zeros_like(image)
-        # Adjust the polygon for a picar (camera close to the ground)
-        polygon = np.array([
-            [(0, height), (width, height), (width, height // 2), (0, height // 2)]
-        ], np.int32)
-        cv2.fillPoly(mask, [polygon], 255)
-        return cv2.bitwise_and(image, mask)
+        # Define source and destination points for the transform
+        src = np.float32([
+            [width * 0.4, height * 0.6],
+            [width * 0.6, height * 0.6],
+            [width * 0.9, height],
+            [width * 0.1, height]
+        ])
+        dst = np.float32([
+            [width * 0.1, 0],
+            [width * 0.9, 0],
+            [width * 0.9, height],
+            [width * 0.1, height]
+        ])
+        # Compute the perspective transform matrix
+        M = cv2.getPerspectiveTransform(src, dst)
+        # Warp the image
+        warped = cv2.warpPerspective(image, M, (width, height), flags=cv2.INTER_LINEAR)
+        return warped, M
 
-    def detect_edges(self, image):
+    def detect_lanes(self, image):
+        # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        blur = cv2.GaussianBlur(gray, (7, 7), 0)
+        # Apply Gaussian blur
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        # Detect edges using Canny
         edges = cv2.Canny(blur, 50, 150)
-        return edges
+        # Apply perspective transform
+        warped, _ = self.perspective_transform(edges)
+        # Use sliding windows to detect lanes
+        histogram = np.sum(warped[warped.shape[0] // 2:, :], axis=0)
+        midpoint = histogram.shape[0] // 2
+        leftx_base = np.argmax(histogram[:midpoint])
+        rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
-    def detect_yellow_lines(self, image):
-        # Convert to HSV color space
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        # Define range for yellow color in HSV
-        lower_yellow = np.array([20, 100, 100])
-        upper_yellow = np.array([30, 255, 255])
-        # Threshold the HSV image to get only yellow colors
-        mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-        # Apply Gaussian blur to smooth the mask
-        mask = cv2.GaussianBlur(mask, (5, 5), 0)
-        return mask
+        # Set up sliding windows
+        nwindows = 9
+        window_height = warped.shape[0] // nwindows
+        nonzero = warped.nonzero()
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        leftx_current = leftx_base
+        rightx_current = rightx_base
+        margin = 100
+        minpix = 50
+        left_lane_inds = []
+        right_lane_inds = []
 
-    def combine_edges(self, edges, yellow_mask):
-        # Combine the edges from Canny and yellow line detection
-        combined = cv2.bitwise_or(edges, yellow_mask)
-        return combined
+        for window in range(nwindows):
+            win_y_low = warped.shape[0] - (window + 1) * window_height
+            win_y_high = warped.shape[0] - window * window_height
+            win_xleft_low = leftx_current - margin
+            win_xleft_high = leftx_current + margin
+            win_xright_low = rightx_current - margin
+            win_xright_high = rightx_current + margin
 
-    def average_slope_intercept(self, image, lines):
-        left_fit = []
-        right_fit = []
-        if lines is None:
-            return None
+            good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
+                              (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
+            good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
+                               (nonzerox >= win_xright_low) & (nonzerox < win_xright_high)).nonzero()[0]
 
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            parameters = np.polyfit((x1, x2), (y1, y2), 1)
-            slope = parameters[0]
-            intercept = parameters[1]
-            if slope < 0:
-                left_fit.append((slope, intercept))
-            else:
-                right_fit.append((slope, intercept))
+            left_lane_inds.append(good_left_inds)
+            right_lane_inds.append(good_right_inds)
 
-        left_fit_avg = np.average(left_fit, axis=0) if left_fit else None
-        right_fit_avg = np.average(right_fit, axis=0) if right_fit else None
+            if len(good_left_inds) > minpix:
+                leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
+            if len(good_right_inds) > minpix:
+                rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
 
-        return left_fit_avg, right_fit_avg
+        left_lane_inds = np.concatenate(left_lane_inds)
+        right_lane_inds = np.concatenate(right_lane_inds)
 
-    def make_line_points(self, image, line_parameters):
-        if line_parameters is None:
-            return None
+        leftx = nonzerox[left_lane_inds]
+        lefty = nonzeroy[left_lane_inds]
+        rightx = nonzerox[right_lane_inds]
+        righty = nonzeroy[right_lane_inds]
 
-        slope, intercept = line_parameters
-        height, width, _ = image.shape
+        # Fit a second-order polynomial to the lane lines
+        left_fit = np.polyfit(lefty, leftx, 2)
+        right_fit = np.polyfit(righty, rightx, 2)
 
-        # Calculate y1 (bottom of the image) and y2 (slightly above the middle)
-        y1 = height
-        y2 = int(height * 0.6)
+        # Generate x and y values for plotting
+        ploty = np.linspace(0, warped.shape[0] - 1, warped.shape[0])
+        left_fitx = left_fit[0] * ploty**2 + left_fit[1] * ploty + left_fit[2]
+        right_fitx = right_fit[0] * ploty**2 + right_fit[1] * ploty + right_fit[2]
 
-        # Calculate x1 and x2 using the line equation: x = (y - intercept) / slope
-        if slope == 0:  # Avoid division by zero
-            return None
-        x1 = int((y1 - intercept) / slope)
-        x2 = int((y2 - intercept) / slope)
+        # Calculate the center of the lane
+        lane_center = (left_fitx[-1] + right_fitx[-1]) // 2
+        frame_center = warped.shape[1] // 2
+        deviation = lane_center - frame_center
 
-        # Ensure the points are within the image boundaries
-        if x1 < 0 or x1 > width or x2 < 0 or x2 > width:
-            return None
-
-        return ((x1, y1), (x2, y2))  # Return a tuple of tuples
-
-    def detect_lines(self, edges, image):
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 50, minLineLength=50, maxLineGap=150)
-        averaged_lines = self.average_slope_intercept(image, lines)
-        line_image = np.zeros_like(image)
-
-        if averaged_lines is not None:
-            left_line = self.make_line_points(image, averaged_lines[0])
-            right_line = self.make_line_points(image, averaged_lines[1])
-
-            if left_line is not None:
-                cv2.line(line_image, left_line[0], left_line[1], (0, 255, 0), 10)
-            if right_line is not None:
-                cv2.line(line_image, right_line[0], right_line[1], (0, 255, 0), 10)
-
-            # Calculate the center of the lane
-            if left_line is not None and right_line is not None:
-                center_x = (left_line[0][0] + right_line[0][0]) // 2
-                center_y = (left_line[0][1] + right_line[0][1]) // 2
-                cv2.circle(line_image, (center_x, center_y), 10, (0, 0, 255), -1)
-                return center_x, center_y
-
-        return None
-
-    def process_frame(self, frame):
-        edges = self.detect_edges(frame)
-        yellow_mask = self.detect_yellow_lines(frame)
-        combined_edges = self.combine_edges(edges, yellow_mask)
-        masked_edges = self.region_of_interest(combined_edges)
-        return self.detect_lines(masked_edges, frame)
+        return deviation
 
     def run(self, px):
         while True:
@@ -124,15 +111,9 @@ class LaneDetection:
                 break
 
             # Process the frame to detect lanes
-            lane_center = self.process_frame(frame)
+            deviation = self.detect_lanes(frame)
 
-            if lane_center is not None:
-                center_x, center_y = lane_center
-                frame_center = frame.shape[1] // 2  # Center of the frame
-
-                # Calculate deviation from the center
-                deviation = center_x - frame_center
-
+            if deviation is not None:
                 # Adjust steering angle based on deviation
                 steering_angle = -deviation // 10  # Scale deviation to steering angle
                 steering_angle = max(-30, min(30, steering_angle))  # Constrain steering angle
