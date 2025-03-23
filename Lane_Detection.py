@@ -1,23 +1,35 @@
 import cv2
 import numpy as np
+import picar
 
 class LaneDetection:
     def __init__(self):
         self.camera = cv2.VideoCapture(-1)
         self.camera.set(3, 640)
         self.camera.set(4, 480)
+        picar.setup()
+        self.servo = picar.Servo()
 
     def region_of_interest(self, image):
         mask = np.zeros_like(image)
         height, width = image.shape[:2]
         polygons = np.array([
-            [(0, height), (width, height), (width//2, height//2)]
+            [(0, height), (width, height), (int(width * 0.45), int(height * 0.6)), (int(width * 0.55), int(height * 0.6))]
         ])
         cv2.fillPoly(mask, polygons, (255, 255, 255))
         return cv2.bitwise_and(image, mask)
 
     def detect_edges(self, image):
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+        # Improved masking for white and yellow
+        white_mask = cv2.inRange(hsv, (0, 0, 200), (180, 30, 255))
+        yellow_mask = cv2.inRange(hsv, (15, 100, 100), (35, 255, 255))
+
+        combined_mask = cv2.bitwise_or(white_mask, yellow_mask)
+        filtered_image = cv2.bitwise_and(image, image, mask=combined_mask)
+
+        gray = cv2.cvtColor(filtered_image, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
         edges = cv2.Canny(blur, 50, 150)
         return edges
@@ -61,8 +73,16 @@ class LaneDetection:
             center_x = (left_edge + right_edge) // 2
             height = image.shape[0]
             center_y = int(height * 0.7)
+
             cv2.circle(image, (center_x, center_y), 10, (0, 0, 255), -1)
 
+            # Control car wheels to align with midpoint using picar
+            frame_center = image.shape[1] // 2
+            steering_angle = int((center_x - frame_center) / 3)
+            steering_angle = max(-45, min(45, steering_angle))
+
+            print(f"Steering Angle: {steering_angle}")
+            self.servo.set_angle(steering_angle)
 
     def run(self):
         while True:
