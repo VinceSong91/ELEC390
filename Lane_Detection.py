@@ -43,11 +43,26 @@ class LaneDetection:
         self.draw_lines(image, left_lines, (255, 255, 255))  # White for solid outer lines
         self.draw_lines(image, right_lines, (255, 255, 255))
         self.draw_lines(image, middle_lines, (0, 255, 255)) # Yellow for the middle line
+        
+        self.plot_center_point(image, left_lines, right_lines)
 
     def draw_lines(self, image, lines, color):
         for line in lines:
             x1, y1, x2, y2 = line[0]
             cv2.line(image, (x1, y1), (x2, y2), color, 5)
+
+    def plot_center_point(self, image, left_lines, right_lines):
+        left_xs = [x1 for line in left_lines for x1, _, x2, _ in line[0]]
+        right_xs = [x1 for line in right_lines for x1, _, x2, _ in line[0]]
+
+        if left_xs and right_xs:
+            left_edge = max(left_xs)
+            right_edge = min(right_xs)
+            center_x = (left_edge + right_edge) // 2
+            height = image.shape[0]
+            center_y = int(height * 0.7)
+
+            cv2.circle(image, (center_x, center_y), 10, (0, 0, 255), -1)
 
     def run(self):
         while True:
