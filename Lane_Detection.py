@@ -172,6 +172,7 @@ class LaneDetection:
                     # If car is too close to the yellow line, steer away
                     if distance_to_yellow < 50:  # Safety margin
                         steering_angle = -20  # Steer right to avoid crossing the yellow line
+                        print("Warning: Too close to yellow line! Steering right.")
 
                 px.set_dir_servo_angle(steering_angle)
 
@@ -183,9 +184,14 @@ class LaneDetection:
 
                 # Draw the detected lanes and steering direction
                 frame = self.draw_lanes(frame, left_fitx, right_fitx, steering_angle)
+
+                # Terminal updates
+                print(f"Steering Angle: {steering_angle}°")
+                print(f"Yellow Line Detected: {yellow_pixels > 1000}")
             else:
                 # Stop if no lanes are detected
                 px.stop()
+                print("No lanes detected. Stopping.")
 
             # Display the frame
             cv2.imshow('Lane Detection', frame)
