@@ -1,13 +1,11 @@
 import cv2
 import numpy as np
-import picarx as Picarx
 
 class LaneDetection:
     def __init__(self):
         self.camera = cv2.VideoCapture(-1)
         self.camera.set(3, 640)
         self.camera.set(4, 480)
-        self.servo = Picarx.Servo()
 
     def region_of_interest(self, image):
         mask = np.zeros_like(image)
@@ -74,14 +72,6 @@ class LaneDetection:
             center_y = int(height * 0.7)
 
             cv2.circle(image, (center_x, center_y), 10, (0, 0, 255), -1)
-
-            # Control car wheels to align with midpoint using picarx
-            frame_center = image.shape[1] // 2
-            steering_angle = int((center_x - frame_center) / 3)
-            steering_angle = max(-45, min(45, steering_angle))
-
-            print(f"Steering Angle: {steering_angle}")
-            self.servo.set_angle(steering_angle)
 
     def run(self):
         while True:
