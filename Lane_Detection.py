@@ -12,15 +12,18 @@ def detect_lanes(frame):
     # Detect edges using Canny
     edges = cv2.Canny(blur, 50, 150)
     
-    # Define region of interest (ROI)
+    # Define region of interest (ROI) for downward and rightward tilt
     height, width = edges.shape
     mask = np.zeros_like(edges)
+    
+    # Adjusted polygon for downward and rightward tilt
     polygon = np.array([[
-        (0, height),
-        (width // 2 - 50, height // 2 + 50),
-        (width // 2 + 50, height // 2 + 50),
-        (width, height),
+        (width * 0.4, height * 0.6),  # Top-left point shifted right
+        (width * 0.1, height),        # Bottom-left point
+        (width, height),              # Bottom-right point
+        (width * 0.7, height * 0.6),  # Top-right point shifted left
     ]], np.int32)
+    
     cv2.fillPoly(mask, polygon, 255)
     masked_edges = cv2.bitwise_and(edges, mask)
     
