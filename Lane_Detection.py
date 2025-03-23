@@ -1,5 +1,14 @@
 import cv2
 import numpy as np
+import time
+from picarx import Picarx  # Assuming you have the Picar-X library installed
+
+# Initialize PiCar-X
+px = Picarx()
+
+# Ultrasonic sensor setup
+def get_distance():
+    return px.ultrasonic.read()
 
 # Function to detect lanes
 def detect_lanes(frame):
@@ -12,7 +21,7 @@ def detect_lanes(frame):
     # Detect edges using Canny
     edges = cv2.Canny(blur, 50, 150)
     
-    # Define region of interest (ROI) for downward and rightward tilt
+    # Define region of interest (ROI)
     height, width = edges.shape
     mask = np.zeros_like(edges)
     
@@ -58,7 +67,39 @@ def detect_lanes(frame):
     draw_lines(frame, right_lines, (0, 0, 255), 5)  # Red for right lane
     draw_lines(frame, middle_lines, (0, 255, 255), 5)  # Yellow for middle lane
     
-    return frame
+    return frame, left_lines, right_lines, middle_lines
+
+# Function to adjust camera tilt and wheel steering
+def adjust_camera_and_wheels(left_lines, right_lines, distance):
+    if distance < 20:  # Obstacle too close, stop the car
+        px.stop()
+        print("Obstacle detected! Stopping the car.")
+        return
+    
+    # Calculate the center of the detected lanes
+    left_lane_pos = np.mean([line[0] for line in left_lines]) if left_lines else None
+    right_lane_pos = np.mean([line[0] for line in right_lines]) if right_lines else None
+    
+    if left_lane_pos is not None and right_lane_pos is not None:
+        lane_center = (left_lane_pos + right_lane_pos) / 2
+        frame_center = 320  # Assuming frame width is 640px
+        
+        # Calculate deviation from the center
+        deviation = lane_center - frame_center
+        
+        # Adjust wheel steering based on deviation
+        steering_angle = -deviation / 100  # Scale deviation to a reasonable steering angle
+        px.set_dir_servo_angle(steering_angle)
+        print(f"Steering angle: {steering_angle:.2f}")
+        
+        # Adjust camera tilt based on deviation
+        camera_tilt = -deviation / 200  # Scale deviation to a reasonable tilt angle
+        px.set_camera_tilt_angle(camera_tilt)
+        print(f"Camera tilt: {camera_tilt:.2f}")
+    else:
+        # No lanes detected, stop the car
+        px.stop()
+        print("No lanes detected! Stopping the car.")
 
 # Capture video from the PiCar-X camera
 cap = cv2.VideoCapture(0)  # Use 0 for the default camera
@@ -69,7 +110,14 @@ while True:
         break
     
     # Detect lanes
-    output_frame = detect_lanes(frame)
+    output_frame, left_lines, right_lines, middle_lines = detect_lanes(frame)
+    
+    # Get distance from ultrasonic sensor
+    distance = get_distance()
+    print(f"Distance: {distance} cm")
+    
+    # Adjust camera tilt and wheel steering
+    adjust_camera_and_wheels(left_lines, right_lines, distance)
     
     # Display the output
     cv2.imshow("Lane Detection", output_frame)
@@ -81,3 +129,4 @@ while True:
 # Release resources
 cap.release()
 cv2.destroyAllWindows()
+px.stop()
