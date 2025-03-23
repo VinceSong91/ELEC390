@@ -56,7 +56,7 @@ def detect_lanes(frame):
     
     return frame, right_lines
 
-# Function to adjust wheel steering, camera pan, and camera tilt based on the right lane
+# Function to adjust wheel steering and camera tilt based on the right lane
 def follow_right_lane(right_lines):
     if right_lines:
         # Calculate the average x-position of the right lane
@@ -71,13 +71,8 @@ def follow_right_lane(right_lines):
         px.set_dir_servo_angle(steering_angle)
         print(f"Steering angle: {steering_angle:.2f}")
         
-        # Adjust camera pan to keep the right lane centered
-        camera_pan = -deviation / 100 - 15  # Scale deviation to a reasonable pan angle
-        px.set_cam_pan_angle(camera_pan)
-        print(f"Camera pan: {camera_pan:.2f}")
-        
         # Adjust camera tilt to keep the right lane centered
-        camera_tilt = -10  # Fixed downward tilt for better accuracy
+        camera_tilt = -deviation / 100  # Increase sensitivity for camera tilt
         px.set_cam_tilt_angle(camera_tilt)
         print(f"Camera tilt: {camera_tilt:.2f}")
         
@@ -112,4 +107,4 @@ while True:
 # Release resources
 cap.release()
 cv2.destroyAllWindows()
-px.stop() 
+px.stop()
