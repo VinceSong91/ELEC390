@@ -8,9 +8,6 @@ class LaneDetection:
         self.camera = cv2.VideoCapture(-1)  # Use -1 for default camera
         self.camera.set(3, 640)  # Set width to 640
         self.camera.set(4, 480)  # Set height to 480
-        # Initialize camera tilt using servo
-        self.px = Picarx()
-        self.px.set_cam_tilt_angle(-20)  # Tilt camera downwards
 
     def perspective_transform(self, image):
         height, width = image.shape[:2]
