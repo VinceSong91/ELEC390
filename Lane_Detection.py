@@ -204,6 +204,10 @@ class LaneDetection:
         px.stop()
 
 if __name__ == '__main__':
+    # Initialize Picar-X with corrected servo and motor offsets
     px = Picarx()
+    px.set_dir_servo_offset(0)  # Reset direction servo offset to 0
+    px.set_motor_offset(1, 1)   # Ensure motors are calibrated correctly
+
     lane_detector = LaneDetection()
     lane_detector.run(px)
