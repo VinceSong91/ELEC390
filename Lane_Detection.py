@@ -10,8 +10,9 @@ class LaneDetection:
     def region_of_interest(self, image):
         height, width = image.shape[:2]
         mask = np.zeros_like(image)
+        # Adjust the polygon for a picar (camera close to the ground)
         polygon = np.array([
-            [(0, height), (width, height), (width // 2 + 50, height // 2 + 50), (width // 2 - 50, height // 2 + 50)]
+            [(0, height), (width, height), (width, height // 2), (0, height // 2)]
         ], np.int32)
         cv2.fillPoly(mask, [polygon], 255)
         return cv2.bitwise_and(image, mask)
@@ -21,6 +22,23 @@ class LaneDetection:
         blur = cv2.GaussianBlur(gray, (7, 7), 0)
         edges = cv2.Canny(blur, 50, 150)
         return edges
+
+    def detect_yellow_lines(self, image):
+        # Convert to HSV color space
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        # Define range for yellow color in HSV
+        lower_yellow = np.array([20, 100, 100])
+        upper_yellow = np.array([30, 255, 255])
+        # Threshold the HSV image to get only yellow colors
+        mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+        # Apply Gaussian blur to smooth the mask
+        mask = cv2.GaussianBlur(mask, (5, 5), 0)
+        return mask
+
+    def combine_edges(self, edges, yellow_mask):
+        # Combine the edges from Canny and yellow line detection
+        combined = cv2.bitwise_or(edges, yellow_mask)
+        return combined
 
     def average_slope_intercept(self, image, lines):
         left_fit = []
@@ -76,10 +94,8 @@ class LaneDetection:
             right_line = self.make_line_points(image, averaged_lines[1])
 
             if left_line is not None:
-                print("Left Line Points:", left_line)  # Debugging
                 cv2.line(line_image, left_line[0], left_line[1], (0, 255, 0), 10)
             if right_line is not None:
-                print("Right Line Points:", right_line)  # Debugging
                 cv2.line(line_image, right_line[0], right_line[1], (0, 255, 0), 10)
 
             # Calculate the center of the lane
@@ -92,7 +108,9 @@ class LaneDetection:
 
     def process_frame(self, frame):
         edges = self.detect_edges(frame)
-        masked_edges = self.region_of_interest(edges)
+        yellow_mask = self.detect_yellow_lines(frame)
+        combined_edges = self.combine_edges(edges, yellow_mask)
+        masked_edges = self.region_of_interest(combined_edges)
         return self.detect_lines(masked_edges, frame)
 
     def run(self):
