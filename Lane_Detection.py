@@ -38,7 +38,7 @@ class LaneDetection:
         # Detect edges using Canny
         edges = cv2.Canny(blur, 50, 150)
         # Apply perspective transform
-        warped, _ = self.perspective_transform(edges)
+        warped, M = self.perspective_transform(edges)
         # Use sliding windows to detect lanes
         histogram = np.sum(warped[warped.shape[0] // 2:, :], axis=0)
         midpoint = histogram.shape[0] // 2
@@ -90,7 +90,7 @@ class LaneDetection:
 
         # Check if any lane pixels were detected
         if len(leftx) == 0 or len(rightx) == 0:
-            return None  # No lanes detected
+            return None, None, None  # No lanes detected
 
         # Fit a second-order polynomial to the lane lines
         left_fit = np.polyfit(lefty, leftx, 2)
@@ -106,7 +106,39 @@ class LaneDetection:
         frame_center = warped.shape[1] // 2
         deviation = lane_center - frame_center
 
-        return deviation
+        return deviation, left_fitx, right_fitx
+
+    def draw_lanes(self, frame, left_fitx, right_fitx, steering_angle):
+        height, width, _ = frame.shape
+        ploty = np.linspace(0, height - 1, height)
+
+        # Create an empty image to draw the lanes
+        warp_zero = np.zeros_like(frame[:, :, 0]).astype(np.uint8)
+        color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
+
+        # Recast the x and y points into usable format for cv2.fillPoly
+        pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
+        pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
+        pts = np.hstack((pts_left, pts_right))
+
+        # Draw the lane onto the warped blank image
+        cv2.fillPoly(color_warp, np.int_([pts]), (0, 255, 0))
+
+        # Warp the blank back to original image space using inverse perspective matrix (Minv)
+        _, Minv = self.perspective_transform(frame)
+        newwarp = cv2.warpPerspective(color_warp, Minv, (width, height))
+
+        # Combine the result with the original image
+        result = cv2.addWeighted(frame, 1, newwarp, 0.3, 0)
+
+        # Draw the steering direction
+        center_x = width // 2
+        center_y = height
+        end_x = center_x + int(100 * np.sin(np.radians(steering_angle)))
+        end_y = center_y - int(100 * np.cos(np.radians(steering_angle)))
+        cv2.arrowedLine(result, (center_x, center_y), (end_x, end_y), (0, 0, 255), 5)
+
+        return result
 
     def run(self, px):
         while True:
@@ -116,7 +148,7 @@ class LaneDetection:
                 break
 
             # Process the frame to detect lanes
-            deviation = self.detect_lanes(frame)
+            deviation, left_fitx, right_fitx = self.detect_lanes(frame)
 
             if deviation is not None:
                 # Adjust steering angle based on deviation
@@ -126,6 +158,9 @@ class LaneDetection:
 
                 # Move forward
                 px.forward(30)
+
+                # Draw the detected lanes and steering direction
+                frame = self.draw_lanes(frame, left_fitx, right_fitx, steering_angle)
             else:
                 # Stop if no lanes are detected
                 px.stop()
