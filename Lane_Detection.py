@@ -7,7 +7,6 @@ class LaneDetection:
         self.camera = cv2.VideoCapture(-1)
         self.camera.set(3, 640)
         self.camera.set(4, 480)
-        Picarx.setup()
         self.servo = Picarx.Servo()
 
     def region_of_interest(self, image):
