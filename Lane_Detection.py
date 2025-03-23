@@ -84,7 +84,7 @@ def adjust_camera_and_wheels(left_lines, right_lines):
         
         # Adjust camera tilt further down based on deviation
         camera_tilt = -10  # Fixed downward tilt for better accuracy
-        px.set_camera_tilt_angle(camera_tilt)
+        px.set_cam_tilt_angle(camera_tilt)
         print(f"Camera tilt: {camera_tilt:.2f}")
     else:
         # No lanes detected, stop the car
