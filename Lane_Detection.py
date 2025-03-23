@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+from picarx import Picarx
+import time
 
 class LaneDetection:
     def __init__(self):
@@ -103,8 +105,9 @@ class LaneDetection:
                 center_x = (left_line[0][0] + right_line[0][0]) // 2
                 center_y = (left_line[0][1] + right_line[0][1]) // 2
                 cv2.circle(line_image, (center_x, center_y), 10, (0, 0, 255), -1)
+                return center_x, center_y
 
-        return cv2.addWeighted(image, 0.8, line_image, 1, 1)
+        return None
 
     def process_frame(self, frame):
         edges = self.detect_edges(frame)
@@ -113,21 +116,45 @@ class LaneDetection:
         masked_edges = self.region_of_interest(combined_edges)
         return self.detect_lines(masked_edges, frame)
 
-    def run(self):
+    def run(self, px):
         while True:
             ret, frame = self.camera.read()
             if not ret:
                 print("Failed to grab frame")
                 break
-            processed_frame = self.process_frame(frame)
-            cv2.imshow('Lane Detection', processed_frame)
+
+            # Process the frame to detect lanes
+            lane_center = self.process_frame(frame)
+
+            if lane_center is not None:
+                center_x, center_y = lane_center
+                frame_center = frame.shape[1] // 2  # Center of the frame
+
+                # Calculate deviation from the center
+                deviation = center_x - frame_center
+
+                # Adjust steering angle based on deviation
+                steering_angle = -deviation // 10  # Scale deviation to steering angle
+                steering_angle = max(-30, min(30, steering_angle))  # Constrain steering angle
+                px.set_dir_servo_angle(steering_angle)
+
+                # Move forward
+                px.forward(30)
+            else:
+                # Stop if no lanes are detected
+                px.stop()
+
+            # Display the frame
+            cv2.imshow('Lane Detection', frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         self.camera.release()
         cv2.destroyAllWindows()
+        px.stop()
 
 if __name__ == '__main__':
+    px = Picarx()
     lane_detector = LaneDetection()
-    lane_detector.run()
+    lane_detector.run(px)
