@@ -1,29 +1,23 @@
 import time
 from picarx import PicarX
 
-import board
-import analogio
-
-grayscale_sensor = analogio.AnalogIn(board.A0) # Change this based on how our sensor is connected
-
-WHITE_THRESHOLD = 30000  # Test this value
-
-def read_grayscale():
-    return grayscale_sensor.value
+WHITE_THRESHOLD = 700  # Adjust based on testing
 
 def main():
     car = PicarX()
 
     try:
         while True:
-            sensor_value = read_grayscale()
-            print("Grayscale value: ", sensor_value) # To test the threshold value
+            grayscale_values = car.get_grayscale_data()
+            print("Grayscale sensor readings:", grayscale_values)
 
-            if sensor_value > WHITE_THRESHOLD:
+            # Check if any of the sensors detect a white line
+            if any(value > WHITE_THRESHOLD for value in grayscale_values):
                 car.stop()
                 # Figure out condition to move car again (camera check for cars maybe?)
                 time.sleep(2)
                 car.forward()
+                time.sleep(1.5) # Some time to let the car pass the stop line before starting detection again
             else:
                 car.forward()
 
