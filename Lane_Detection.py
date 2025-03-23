@@ -52,8 +52,8 @@ class LaneDetection:
             cv2.line(image, (x1, y1), (x2, y2), color, 5)
 
     def plot_center_point(self, image, left_lines, right_lines):
-        left_xs = [x1 for line in left_lines for x1, _, x2, _ in line[0]]
-        right_xs = [x1 for line in right_lines for x1, _, x2, _ in line[0]]
+        left_xs = [line[0][0] for line in left_lines if len(line[0]) == 4]
+        right_xs = [line[0][0] for line in right_lines if len(line[0]) == 4]
 
         if left_xs and right_xs:
             left_edge = max(left_xs)
@@ -61,8 +61,8 @@ class LaneDetection:
             center_x = (left_edge + right_edge) // 2
             height = image.shape[0]
             center_y = int(height * 0.7)
-
             cv2.circle(image, (center_x, center_y), 10, (0, 0, 255), -1)
+
 
     def run(self):
         while True:
