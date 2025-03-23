@@ -53,7 +53,7 @@ class LaneDetection:
         y2 = int(height * 0.6)
         x1 = int((y1 - intercept) / slope)
         x2 = int((y2 - intercept) / slope)
-        return np.array([x1, y1, x2, y2])
+        return ((x1, y1), (x2, y2))  # Return a tuple of tuples
 
     def detect_lines(self, edges, image):
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 50, minLineLength=50, maxLineGap=150)
@@ -65,14 +65,14 @@ class LaneDetection:
             right_line = self.make_line_points(image, averaged_lines[1])
 
             if left_line is not None:
-                cv2.line(line_image, (left_line[0], left_line[1]), (left_line[2], left_line[3]), (0, 255, 0), 10)
+                cv2.line(line_image, left_line[0], left_line[1], (0, 255, 0), 10)
             if right_line is not None:
-                cv2.line(line_image, (right_line[0], right_line[1]), (right_line[2], right_line[3]), (0, 255, 0), 10)
+                cv2.line(line_image, right_line[0], right_line[1], (0, 255, 0), 10)
 
             # Calculate the center of the lane
             if left_line is not None and right_line is not None:
-                center_x = (left_line[0] + right_line[0]) // 2
-                center_y = (left_line[1] + right_line[1]) // 2
+                center_x = (left_line[0][0] + right_line[0][0]) // 2
+                center_y = (left_line[0][1] + right_line[0][1]) // 2
                 cv2.circle(line_image, (center_x, center_y), 10, (0, 0, 255), -1)
 
         return cv2.addWeighted(image, 0.8, line_image, 1, 1)
