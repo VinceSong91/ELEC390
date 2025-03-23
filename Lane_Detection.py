@@ -119,10 +119,6 @@ class LaneDetection:
                 steering_angle = max(-30, min(30, steering_angle))  # Constrain steering angle
                 px.set_dir_servo_angle(steering_angle)
 
-                # Adjust camera pan and tilt for better lane visibility
-                px.set_cam_pan_angle(steering_angle // 2)  # Pan the camera slightly
-                px.set_cam_tilt_angle(-10)  # Tilt the camera downward
-
                 # Move forward
                 px.forward(30)
             else:
