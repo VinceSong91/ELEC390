@@ -144,6 +144,9 @@ class LaneDetection:
         return frame
 
     def run(self, px):
+        # Set camera tilt angle to look slightly downward
+        px.set_cam_tilt_angle(-20)  # Adjust the angle as needed
+
         while True:
             ret, frame = self.camera.read()
             if not ret:
@@ -172,6 +175,7 @@ class LaneDetection:
                     # If car is too close to the yellow line, steer away
                     if distance_to_yellow < 50:  # Safety margin
                         steering_angle = -20  # Steer right to avoid crossing the yellow line
+                        print("Warning: Too close to yellow line! Steering right.")
 
                 px.set_dir_servo_angle(steering_angle)
 
@@ -183,9 +187,14 @@ class LaneDetection:
 
                 # Draw the detected lanes and steering direction
                 frame = self.draw_lanes(frame, left_fitx, right_fitx, steering_angle)
+
+                # Terminal updates
+                print(f"Steering Angle: {steering_angle}°")
+                print(f"Yellow Line Detected: {yellow_pixels > 1000}")
             else:
                 # Stop if no lanes are detected
                 px.stop()
+                print("No lanes detected. Stopping.")
 
             # Display the frame
             cv2.imshow('Lane Detection', frame)
