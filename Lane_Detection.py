@@ -67,7 +67,7 @@ def follow_right_lane(right_lines):
         deviation = right_lane_pos - frame_center
         
         # Adjust wheel steering based on deviation
-        steering_angle = -deviation / 50  # Increase sensitivity for steering
+        steering_angle = -deviation / 50 - 15  # Increase sensitivity for steering
         px.set_dir_servo_angle(steering_angle)
         print(f"Steering angle: {steering_angle:.2f}")
         
