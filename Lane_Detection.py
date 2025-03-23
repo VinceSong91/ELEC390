@@ -56,7 +56,7 @@ def detect_lanes(frame):
     
     return frame, right_lines
 
-# Function to adjust wheel steering based on the right lane
+# Function to adjust wheel steering and camera tilt based on the right lane
 def follow_right_lane(right_lines):
     if right_lines:
         # Calculate the average x-position of the right lane
@@ -70,6 +70,11 @@ def follow_right_lane(right_lines):
         steering_angle = -deviation / 100  # Scale deviation to a reasonable steering angle
         px.set_dir_servo_angle(steering_angle)
         print(f"Steering angle: {steering_angle:.2f}")
+        
+        # Adjust camera tilt to keep the right lane centered
+        camera_tilt = -deviation / 200  # Scale deviation to a reasonable tilt angle
+        px.set_cam_tilt_angle(camera_tilt)
+        print(f"Camera tilt: {camera_tilt:.2f}")
         
         # Move forward
         px.forward(50)
