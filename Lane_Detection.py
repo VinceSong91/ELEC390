@@ -49,10 +49,21 @@ class LaneDetection:
 
         slope, intercept = line_parameters
         height, width, _ = image.shape
+
+        # Calculate y1 (bottom of the image) and y2 (slightly above the middle)
         y1 = height
         y2 = int(height * 0.6)
+
+        # Calculate x1 and x2 using the line equation: x = (y - intercept) / slope
+        if slope == 0:  # Avoid division by zero
+            return None
         x1 = int((y1 - intercept) / slope)
         x2 = int((y2 - intercept) / slope)
+
+        # Ensure the points are within the image boundaries
+        if x1 < 0 or x1 > width or x2 < 0 or x2 > width:
+            return None
+
         return ((x1, y1), (x2, y2))  # Return a tuple of tuples
 
     def detect_lines(self, edges, image):
@@ -65,8 +76,10 @@ class LaneDetection:
             right_line = self.make_line_points(image, averaged_lines[1])
 
             if left_line is not None:
+                print("Left Line Points:", left_line)  # Debugging
                 cv2.line(line_image, left_line[0], left_line[1], (0, 255, 0), 10)
             if right_line is not None:
+                print("Right Line Points:", right_line)  # Debugging
                 cv2.line(line_image, right_line[0], right_line[1], (0, 255, 0), 10)
 
             # Calculate the center of the lane
