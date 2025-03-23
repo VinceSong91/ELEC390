@@ -12,17 +12,18 @@ class LaneDetection:
     def perspective_transform(self, image):
         height, width = image.shape[:2]
         # Define source and destination points for the transform
+        # Focus on the lower part of the image (closer to the car)
         src = np.float32([
-            [width * 0.2, height * 0.8],  # Bottom-left
-            [width * 0.8, height * 0.8],  # Bottom-right
-            [width * 0.7, height * 0.5],  # Top-right
-            [width * 0.3, height * 0.5]   # Top-left
+            [width * 0.1, height * 0.9],  # Bottom-left
+            [width * 0.9, height * 0.9],  # Bottom-right
+            [width * 0.7, height * 0.6],  # Top-right
+            [width * 0.3, height * 0.6]    # Top-left
         ])
         dst = np.float32([
             [width * 0.1, height],  # Bottom-left
             [width * 0.9, height],  # Bottom-right
-            [width * 0.9, 0],      # Top-right
-            [width * 0.1, 0]       # Top-left
+            [width * 0.9, 0],       # Top-right
+            [width * 0.1, 0]        # Top-left
         ])
         # Compute the perspective transform matrix
         M = cv2.getPerspectiveTransform(src, dst)
@@ -144,6 +145,9 @@ class LaneDetection:
         return frame
 
     def run(self, px):
+        # Tilt the camera down to focus on the road immediately in front of the car
+        px.set_cam_tilt_angle(-20)  # Adjust the tilt angle as needed
+
         while True:
             ret, frame = self.camera.read()
             if not ret:
@@ -175,9 +179,6 @@ class LaneDetection:
                         print("Warning: Too close to yellow line! Steering right.")
 
                 px.set_dir_servo_angle(steering_angle)
-
-                # Pan the camera to follow the steering direction
-                px.set_cam_pan_angle(steering_angle // 2)  # Adjust the camera pan angle
 
                 # Move forward
                 px.forward(30)
