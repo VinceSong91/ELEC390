@@ -30,16 +30,6 @@ class LaneDetection:
         warped = cv2.warpPerspective(image, M, (width, height), flags=cv2.INTER_LINEAR)
         return warped, M
 
-    def detect_yellow_line(self, image):
-        # Convert to HSV color space
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        # Define range for yellow color in HSV
-        lower_yellow = np.array([20, 100, 100])
-        upper_yellow = np.array([30, 255, 255])
-        # Threshold the HSV image to get only yellow colors
-        mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-        return mask
-
     def detect_lanes(self, image):
         # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -48,7 +38,7 @@ class LaneDetection:
         # Detect edges using Canny
         edges = cv2.Canny(blur, 50, 150)
         # Apply perspective transform
-        warped, M = self.perspective_transform(edges)
+        warped, _ = self.perspective_transform(edges)
         # Use sliding windows to detect lanes
         histogram = np.sum(warped[warped.shape[0] // 2:, :], axis=0)
         midpoint = histogram.shape[0] // 2
@@ -144,15 +134,14 @@ class LaneDetection:
         return frame
 
     def run(self, px):
+        # Set camera tilt angle to look slightly downward
+        px.set_cam_tilt_angle(-20)  # Adjust the angle as needed
+
         while True:
             ret, frame = self.camera.read()
             if not ret:
                 print("Failed to grab frame")
                 break
-
-            # Detect yellow dotted line
-            yellow_mask = self.detect_yellow_line(frame)
-            yellow_pixels = np.sum(yellow_mask > 0)
 
             # Process the frame to detect lanes
             deviation, left_fitx, right_fitx = self.detect_lanes(frame)
@@ -161,18 +150,6 @@ class LaneDetection:
                 # Adjust steering angle based on deviation
                 steering_angle = -deviation // 10  # Scale deviation to steering angle
                 steering_angle = max(-30, min(30, steering_angle))  # Constrain steering angle
-
-                # If yellow line is detected and car is too close, steer away
-                if yellow_pixels > 1000:  # Threshold for yellow line detection
-                    # Calculate the distance to the yellow line
-                    yellow_line_pos = np.mean(np.where(yellow_mask > 0)[1])
-                    car_pos = frame.shape[1] // 2
-                    distance_to_yellow = car_pos - yellow_line_pos
-
-                    # If car is too close to the yellow line, steer away
-                    if distance_to_yellow < 50:  # Safety margin
-                        steering_angle = -20  # Steer right to avoid crossing the yellow line
-
                 px.set_dir_servo_angle(steering_angle)
 
                 # Pan the camera to follow the steering direction
@@ -183,9 +160,13 @@ class LaneDetection:
 
                 # Draw the detected lanes and steering direction
                 frame = self.draw_lanes(frame, left_fitx, right_fitx, steering_angle)
+
+                # Terminal updates
+                print(f"Steering Angle: {steering_angle}°")
             else:
                 # Stop if no lanes are detected
                 px.stop()
+                print("No lanes detected. Stopping.")
 
             # Display the frame
             cv2.imshow('Lane Detection', frame)
