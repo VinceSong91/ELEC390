@@ -67,9 +67,9 @@ class LaneDetection:
             win_xright_high = rightx_current + margin
 
             good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
-                              (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
+                            (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
             good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) &
-                               (nonzerox >= win_xright_low) & (nonzerox < win_xright_high)).nonzero()[0]
+                            (nonzerox >= win_xright_low) & (nonzerox < win_xright_high)).nonzero()[0]
 
             left_lane_inds.append(good_left_inds)
             right_lane_inds.append(good_right_inds)
@@ -82,10 +82,15 @@ class LaneDetection:
         left_lane_inds = np.concatenate(left_lane_inds)
         right_lane_inds = np.concatenate(right_lane_inds)
 
+        # Extract left and right line pixel positions
         leftx = nonzerox[left_lane_inds]
         lefty = nonzeroy[left_lane_inds]
         rightx = nonzerox[right_lane_inds]
         righty = nonzeroy[right_lane_inds]
+
+        # Check if any lane pixels were detected
+        if len(leftx) == 0 or len(rightx) == 0:
+            return None  # No lanes detected
 
         # Fit a second-order polynomial to the lane lines
         left_fit = np.polyfit(lefty, leftx, 2)
