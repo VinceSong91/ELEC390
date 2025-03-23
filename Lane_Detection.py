@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from picarx import Picarx  # Assuming you have the Picar-X library installed
+from picarx import Picarx  # Import the PiCar-X library
 
 # Initialize PiCar-X
 px = Picarx()
@@ -35,22 +35,16 @@ def detect_lanes(frame):
     lines = cv2.HoughLinesP(masked_edges, 1, np.pi / 180, 50, minLineLength=50, maxLineGap=100)
     
     # Separate and classify lines
-    left_lines = []
     right_lines = []
-    middle_lines = []
     
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]
             slope = (y2 - y1) / (x2 - x1) if (x2 - x1) != 0 else 0
             
-            # Classify lines based on slope and position
-            if slope < -0.5:  # Left lane line
-                left_lines.append(line[0])
-            elif slope > 0.5:  # Right lane line
+            # Classify lines based on slope and position (only right lane)
+            if slope > 0.5:  # Right lane line
                 right_lines.append(line[0])
-            else:  # Middle dotted line
-                middle_lines.append(line[0])
     
     # Draw detected lines on the frame
     def draw_lines(img, lines, color, thickness):
@@ -58,38 +52,31 @@ def detect_lanes(frame):
             x1, y1, x2, y2 = line
             cv2.line(img, (x1, y1), (x2, y2), color, thickness)
     
-    draw_lines(frame, left_lines, (255, 0, 0), 5)  # Blue for left lane
     draw_lines(frame, right_lines, (0, 0, 255), 5)  # Red for right lane
-    draw_lines(frame, middle_lines, (0, 255, 255), 5)  # Yellow for middle lane
     
-    return frame, left_lines, right_lines, middle_lines
+    return frame, right_lines
 
-# Function to adjust camera tilt and wheel steering
-def adjust_camera_and_wheels(left_lines, right_lines):
-    # Calculate the center of the detected lanes
-    left_lane_pos = np.mean([line[0] for line in left_lines]) if left_lines else None
-    right_lane_pos = np.mean([line[0] for line in right_lines]) if right_lines else None
-    
-    if left_lane_pos is not None and right_lane_pos is not None:
-        lane_center = (left_lane_pos + right_lane_pos) / 2
+# Function to adjust wheel steering based on the right lane
+def follow_right_lane(right_lines):
+    if right_lines:
+        # Calculate the average x-position of the right lane
+        right_lane_pos = np.mean([line[0] for line in right_lines])
         frame_center = 320  # Assuming frame width is 640px
         
         # Calculate deviation from the center
-        deviation = lane_center - frame_center
+        deviation = right_lane_pos - frame_center
         
         # Adjust wheel steering based on deviation
         steering_angle = -deviation / 100  # Scale deviation to a reasonable steering angle
         px.set_dir_servo_angle(steering_angle)
         print(f"Steering angle: {steering_angle:.2f}")
         
-        # Adjust camera tilt further down based on deviation
-        camera_tilt = -10  # Fixed downward tilt for better accuracy
-        px.set_cam_tilt_angle(camera_tilt)
-        print(f"Camera tilt: {camera_tilt:.2f}")
+        # Move forward
+        px.forward(50)
     else:
-        # No lanes detected, stop the car
+        # No right lane detected, stop the car
         px.stop()
-        print("No lanes detected! Stopping the car.")
+        print("No right lane detected! Stopping the car.")
 
 # Capture video from the PiCar-X camera
 cap = cv2.VideoCapture(0)  # Use 0 for the default camera
@@ -100,10 +87,10 @@ while True:
         break
     
     # Detect lanes
-    output_frame, left_lines, right_lines, middle_lines = detect_lanes(frame)
+    output_frame, right_lines = detect_lanes(frame)
     
-    # Adjust camera tilt and wheel steering
-    adjust_camera_and_wheels(left_lines, right_lines)
+    # Follow the right lane
+    follow_right_lane(right_lines)
     
     # Display the output
     cv2.imshow("Lane Detection", output_frame)
