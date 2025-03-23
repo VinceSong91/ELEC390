@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from picarx_improved import Picarx  # Assuming you have the Picar-X library installed
+from picarx import Picarx  # Assuming you have the Picar-X library installed
 
 # Initialize PiCar-X
 px = Picarx()
