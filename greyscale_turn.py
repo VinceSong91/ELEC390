@@ -44,17 +44,17 @@ def wait_for_user_input():
         if user_input == "1":
             print("Turning left.")
             px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
-            px.forward(10)  # Move forward after turning
+            px.forward(100)  # Move forward after turning
             break
         elif user_input == "2":
             print("Turning right.")
             px.set_dir_servo_angle(50)  # Adjust the angle for right turn
-            px.forward(10)  # Move forward after turning
+            px.forward(100)  # Move forward after turning
             break
         elif user_input == "3":
             print("Moving forward.")
             px.set_dir_servo_angle(-13)  # Neutral for forward movement
-            px.forward(10)  # Move forward
+            px.forward(100)  # Move forward
             break
         else:
             print("Invalid choice, please try again.")
