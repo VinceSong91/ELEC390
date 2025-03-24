@@ -99,11 +99,11 @@ class Picarx(object):
         self.brake_light.prescaler(self.PRESCALER)
         self.brake_lights_off()
 
-        def brake_lights_on(self):
+    def brake_lights_on(self):
             # Turn on the brake light LED (set duty cycle to 100%).
             self.brake_light.pulse_width_percent(100)
 
-        def brake_lights_off(self):
+    def brake_lights_off(self):
             # Turn off the brake light LED (set duty cycle to 0%).'''
             self.brake_light.pulse_width_percent(0)
         

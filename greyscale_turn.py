@@ -20,18 +20,6 @@ def adjust_direction():
         print("Following straight.")
         px.set_dir_servo_angle(-13)  # Neutral for straight movement
 
-def detect_stop_line():
-    """Check for white stop line using grayscale sensors."""
-    sensor_values = px.get_grayscale_data()
-    print("Grayscale sensor readings:", sensor_values)
-    
-    # If all sensors detect a high value (likely a white stop line)
-    if all(value > WHITE_THRESHOLD for value in sensor_values):
-        print("Stop line detected! Stopping the car and waiting for user input.")
-        px.stop()  # Stop the car when the stop line is detected
-        time.sleep(2)  # Pause for a moment
-        wait_for_user_input()  # Wait for user input to continue
-
 def wait_for_user_input():
     """Wait for the user to input a direction for the car."""
     while True:
@@ -43,16 +31,30 @@ def wait_for_user_input():
 
         if user_input == "1":
             print("Turning left.")
-            px.forward(5)  # Move forward slowly to complete the turn
-            px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
-            time.sleep(3)
-            break
+            # Keep turning left until the left sensor detects the line
+            while True:
+                adjust_direction()  # Adjust direction based on sensor values
+                sensor_values = px.get_grayscale_data()
+                left_sensor = sensor_values[0]
+                if left_sensor > WHITE_THRESHOLD:  # When left sensor detects line
+                    print("Left line detected! Stopping turn.")
+                    px.stop()  # Stop the car once line is detected
+                    break
+                time.sleep(0.1)  # Adjust the speed of checking
+
         elif user_input == "2":
             print("Turning right.")
-            px.forward(5)  # Move forward slowly to complete the turn
-            px.set_dir_servo_angle(50)  # Adjust the angle for right turn
-            time.sleep(3.3)
-            break
+            # Keep turning right until the right sensor detects the line
+            while True:
+                adjust_direction()  # Adjust direction based on sensor values
+                sensor_values = px.get_grayscale_data()
+                right_sensor = sensor_values[2]
+                if right_sensor > WHITE_THRESHOLD:  # When right sensor detects line
+                    print("Right line detected! Stopping turn.")
+                    px.stop()  # Stop the car once line is detected
+                    break
+                time.sleep(0.1)  # Adjust the speed of checking
+
         elif user_input == "3":
             print("Moving forward.")
             px.set_dir_servo_angle(-13)  # Neutral for forward movement
@@ -65,8 +67,6 @@ def main():
     try:
         px.forward(10)  # Start moving slowly
         while True:
-            detect_stop_line()  # Continuously check for stop line
-            adjust_direction()  # Adjust direction based on sensor data
             time.sleep(0.1)
     except KeyboardInterrupt:
         print("Exiting program. Stopping the car.")
