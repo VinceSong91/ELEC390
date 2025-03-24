@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from picarx import Picarx  
+from picarx import Picarx 
 import time
 
 # Initialize PiCar-X
