@@ -7,7 +7,7 @@ px = Picarx()
 cap = cv2.VideoCapture(0)
 NEUTRAL_ANGLE = -13
 CAMERA_TILT_ANGLE = -30
-CAMERA_PAN_ANGLE = -15  # Adjusted to turn the camera more to the left
+CAMERA_PAN_ANGLE = -30  # Further adjust to turn the camera more to the left
 px.set_cam_tilt_angle(CAMERA_TILT_ANGLE)
 px.set_cam_pan_angle(CAMERA_PAN_ANGLE)
 
@@ -16,14 +16,14 @@ def preprocess_image(frame):
     """Apply color filtering to isolate white and yellow lanes."""
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # White lane detection (high saturation and brightness)
-    white_lower = np.array([0, 0, 200])
-    white_upper = np.array([180, 50, 255])
+    # White lane detection
+    white_lower = np.array([0, 0, 180])
+    white_upper = np.array([180, 30, 255])
     white_mask = cv2.inRange(hsv, white_lower, white_upper)
 
-    # Yellow lane detection (specific hue for yellow)
-    yellow_lower = np.array([15, 80, 150])
-    yellow_upper = np.array([35, 255, 255])
+    # Yellow lane detection with expanded hue range
+    yellow_lower = np.array([15, 100, 100])
+    yellow_upper = np.array([40, 255, 255])
     yellow_mask = cv2.inRange(hsv, yellow_lower, yellow_upper)
 
     combined_mask = cv2.bitwise_or(white_mask, yellow_mask)
