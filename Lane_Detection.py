@@ -65,16 +65,16 @@ def lane_follow():
     if not ret:
         return
 
-    # Crop the frame to only the lower 65% of the image
+    # Crop the frame to only the lower 75% of the image
     height, width = frame.shape[:2]
-    lower_65_percent_frame = frame[int(height * 0.35):, :]  # 65% of the lower part
+    lower_75_percent_frame = frame[int(height * 0.25):, :]  # 75% of the lower part
 
-    mask = preprocess_image(lower_65_percent_frame)
+    mask = preprocess_image(lower_75_percent_frame)
     lines = detect_lines(mask)
-    lane_center = calculate_lane_center(lines, lower_65_percent_frame.shape[1])
+    lane_center = calculate_lane_center(lines, lower_75_percent_frame.shape[1])
 
     # Adjust steering
-    steering_adjustment = np.clip((lane_center - lower_65_percent_frame.shape[1] // 2) * 0.03, -30, 30)
+    steering_adjustment = np.clip((lane_center - lower_75_percent_frame.shape[1] // 2) * 0.03, -30, 30)
     final_angle = NEUTRAL_ANGLE + steering_adjustment
     px.set_dir_servo_angle(final_angle)
 
@@ -82,8 +82,8 @@ def lane_follow():
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]
-            # Adjust line drawing to fit in the lower 65% of the frame
-            y_offset = int(height * 0.35)  # Offset lines to fit in the lower 65%
+            # Adjust line drawing to fit in the lower 75% of the frame
+            y_offset = int(height * 0.25)  # Offset lines to fit in the lower 75%
             cv2.line(frame, (x1, y1 + y_offset), (x2, y2 + y_offset), (0, 255, 0), 3)
 
     # Draw the lane center marker on the original frame
