@@ -47,7 +47,7 @@ def wait_for_user_input():
             px.turn_signal_left_on()
 
             print("Turning left.")
-            px.set_dir_servo_angle(-25)  # Adjust the angle for left turn
+            px.set_dir_servo_angle(-30)  # Adjust the angle for left turn
             px.forward(5)  # Move forward slowly while turning
             time.sleep(1)
             while True:
@@ -69,7 +69,7 @@ def wait_for_user_input():
             px.turn_signal_right_on()
 
             print("Turning right.")
-            px.set_dir_servo_angle(17)  # Adjust the angle for right turn
+            px.set_dir_servo_angle(17  )  # Adjust the angle for right turn
             px.forward(5)  # Move forward slowly while turning
             time.sleep(1)
             while True:
