@@ -2,7 +2,7 @@ from robot_hat import Pin, ADC, PWM, Servo, fileDB
 from robot_hat import Grayscale_Module, Ultrasonic, utils
 import time
 import os
-
+import threading
 
 def constrain(x, min_val, max_val):
     '''
@@ -38,7 +38,9 @@ class Picarx(object):
                 grayscale_pins:list=['A0', 'A1', 'A2'],
                 ultrasonic_pins:list=['D2','D3'],
                 brake_lights_pin: str = 'P4',
+                turn_signal_pins: list = ['P5', 'P6'],
                 config:str=CONFIG,
+                blink_interval: float = 0.5
                 ):
 
         # reset robot_hat
@@ -99,13 +101,84 @@ class Picarx(object):
         self.brake_light.prescaler(self.PRESCALER)
         self.brake_lights_off()
 
+        # --------- turn signal LEDs init using PWM on two pins ---------
+        # turn_signal_pins[0]: left turn signal, turn_signal_pins[1]: right turn signal
+        self.turn_signal_left = PWM(turn_signal_pins[0])
+        self.turn_signal_right = PWM(turn_signal_pins[1])
+        for led in [self.turn_signal_left, self.turn_signal_right]:
+            led.period(self.PERIOD)
+            led.prescaler(self.PRESCALER)
+            led.pulse_width_percent(0)  # start with signals off
+
+        # --------- Turn signal blinking attributes ---------
+        self.blink_interval = blink_interval
+        self._blink_left_stop_event = threading.Event()
+        self._blink_right_stop_event = threading.Event()
+        self._blink_left_thread = None
+        self._blink_right_thread = None
+
     def brake_lights_on(self):
-            # Turn on the brake light LED (set duty cycle to 100%).
-            self.brake_light.pulse_width_percent(100)
+        # Turn on the brake light LED (set duty cycle to 100%).
+        self.brake_light.pulse_width_percent(100)
 
     def brake_lights_off(self):
-            # Turn off the brake light LED (set duty cycle to 0%).'''
-            self.brake_light.pulse_width_percent(0)
+        # Turn off the brake light LED (set duty cycle to 0%).'''
+        self.brake_light.pulse_width_percent(0)
+
+    # Internal blinking methods for turn signals
+    def _blink_left(self):
+        while not self._blink_left_stop_event.is_set():
+            self.turn_signal_left.pulse_width_percent(100)
+            time.sleep(self.blink_interval)
+            self.turn_signal_left.pulse_width_percent(0)
+            time.sleep(self.blink_interval)
+        # Ensure LED is off when blinking stops
+        self.turn_signal_left.pulse_width_percent(0)
+
+    def _blink_right(self):
+        while not self._blink_right_stop_event.is_set():
+            self.turn_signal_right.pulse_width_percent(100)
+            time.sleep(self.blink_interval)
+            self.turn_signal_right.pulse_width_percent(0)
+            time.sleep(self.blink_interval)
+        # Ensure LED is off when blinking stops
+        self.turn_signal_right.pulse_width_percent(0)
+
+    # Turn signal methods for left signal with blinking
+    def turn_signal_left_on(self):
+        '''Start blinking the left turn signal LED.'''
+        # If already blinking, do nothing
+        if self._blink_left_thread and self._blink_left_thread.is_alive():
+            return
+        # Clear the stop event and start the thread
+        self._blink_left_stop_event.clear()
+        self._blink_left_thread = threading.Thread(target=self._blink_left)
+        self._blink_left_thread.daemon = True
+        self._blink_left_thread.start()
+
+    def turn_signal_left_off(self):
+        '''Stop blinking the left turn signal LED and turn it off.'''
+        self._blink_left_stop_event.set()
+        if self._blink_left_thread:
+            self._blink_left_thread.join()
+        self.turn_signal_left.pulse_width_percent(0)
+
+    # Turn signal methods for right signal with blinking
+    def turn_signal_right_on(self):
+        '''Start blinking the right turn signal LED.'''
+        if self._blink_right_thread and self._blink_right_thread.is_alive():
+            return
+        self._blink_right_stop_event.clear()
+        self._blink_right_thread = threading.Thread(target=self._blink_right)
+        self._blink_right_thread.daemon = True
+        self._blink_right_thread.start()
+
+    def turn_signal_right_off(self):
+        '''Stop blinking the right turn signal LED and turn it off.'''
+        self._blink_right_stop_event.set()
+        if self._blink_right_thread:
+            self._blink_right_thread.join()
+        self.turn_signal_right.pulse_width_percent(0)
         
     def set_motor_speed(self, motor, speed):
         ''' set motor speed
@@ -232,6 +305,8 @@ class Picarx(object):
         Execute twice to make sure it stops
         '''
         self.brake_lights_on()
+        self.turn_signal_left_off()
+        self.turn_signal_right_off()
         for _ in range(2):
             self.motor_speed_pins[0].pulse_width_percent(0)
             self.motor_speed_pins[1].pulse_width_percent(0)

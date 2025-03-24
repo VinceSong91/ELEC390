@@ -42,6 +42,8 @@ def wait_for_user_input():
         user_input = input("Enter your choice (1/2/3): ").strip()
 
         if user_input == "1":
+            px.turn_signal_left_on()
+
             print("Turning left.")
             px.set_dir_servo_angle(-55)  # Adjust the angle for left turn
             px.forward(5)  # Move forward slowly while turning
@@ -52,10 +54,13 @@ def wait_for_user_input():
 
                 if left_sensor > 200:  # Left sensor detects the line
                     print("Left line detected! Stopping turn.")
+                    px.turn_signal_left_off()
                     main()
                     break
 
         elif user_input == "2":
+            px.turn_signal_right_on()
+
             print("Turning right.")
             px.set_dir_servo_angle(30)  # Adjust the angle for right turn
             px.forward(5)  # Move forward slowly while turning
@@ -65,6 +70,7 @@ def wait_for_user_input():
                 right_sensor = sensor_values[2]
                 if right_sensor > 200:  # Right sensor detects the line
                     print("Right line detected! Stopping turn.")
+                    px.turn_signal_right_off()
                     main()
                     break
 
