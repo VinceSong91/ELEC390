@@ -36,25 +36,23 @@ def wait_for_user_input():
     """Wait for the user to input a direction for the car."""
     while True:
         print("Please choose a direction:")
-        print("1: Close Left Turn")
-        print("2: Close Right Turn ")
-        print("3: Move Forward")
-        user_input = input("Enter your choice (1/2/3): ").strip()
+        print("1: Turn Left")
+        print("2: Turn Right")
+        user_input = input("Enter your choice (1/2): ").strip()
 
         if user_input == "1":
-            print("Turning left.")
+            print("Turning left for 3 seconds.")
             px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
-            px.forward(100)  # Move forward after turning
+            px.forward(10)  # Move forward after turning
+            time.sleep(3)  # Turn for 3 seconds
+            px.stop()
             break
         elif user_input == "2":
-            print("Turning right.")
+            print("Turning right for 3 seconds.")
             px.set_dir_servo_angle(50)  # Adjust the angle for right turn
-            px.forward(100)  # Move forward after turning
-            break
-        elif user_input == "3":
-            print("Moving forward.")
-            px.set_dir_servo_angle(-13)  # Neutral for forward movement
-            px.forward(10)  # Move forward
+            px.forward(10)  # Move forward after turning
+            time.sleep(3)  # Turn for 3 seconds
+            px.stop()
             break
         else:
             print("Invalid choice, please try again.")
