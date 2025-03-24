@@ -27,43 +27,42 @@ def detect_stop_line():
     
     # If all sensors detect a high value (likely a white stop line)
     if all(value > WHITE_THRESHOLD for value in sensor_values):
-        print("Stop line detected! Stopping the car.")
-        px.stop()
-        time.sleep(2)  # Pause for 2 seconds
-        wait_for_user_input()  # Wait for user input after detecting stop line
+        print("Stop line detected!")
+        return True
+    return False
 
 def wait_for_user_input():
-    """Wait for the user to input a direction for the car."""
+    """Wait for user input to determine the next action."""
     while True:
-        print("Please choose a direction:")
-        print("1: Turn Left")
-        print("2: Turn Right")
-        user_input = input("Enter your choice (1/2): ").strip()
-
-        if user_input == "1":
-            print("Turning left for 3 seconds.")
-            px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
-            px.forward(10)  # Move forward after turning
-            time.sleep(3)  # Turn for 3 seconds
-            px.stop()
-            break
-        elif user_input == "2":
-            print("Turning right for 3 seconds.")
-            px.set_dir_servo_angle(50)  # Adjust the angle for right turn
-            px.forward(10)  # Move forward after turning
-            time.sleep(3)  # Turn for 3 seconds
-            px.stop()
-            break
+        user_input = input("Enter 'l' to turn left, 'r' to turn right, or 'f' to go forward: ").lower()
+        if user_input in ['l', 'r', 'f']:
+            return user_input
         else:
-            print("Invalid choice, please try again.")
+            print("Invalid input. Please enter 'l', 'r', or 'f'.")
 
 def main():
     try:
         px.forward(10)  # Start moving slowly
         while True:
-            detect_stop_line()
-            adjust_direction()
-            time.sleep(0.1)
+            if detect_stop_line():
+                action = wait_for_user_input()
+                if action == 'l':
+                    print("Turning left for 3 seconds.")
+                    px.set_dir_servo_angle(50)
+                    time.sleep(3)
+                elif action == 'r':
+                    print("Turning right for 3 seconds.")
+                    px.set_dir_servo_angle(-76)
+                    time.sleep(3)
+                elif action == 'f':
+                    print("Continuing forward.")
+                    px.forward(10)
+                # After action, continue straight
+                px.set_dir_servo_angle(-13)  # Neutral for straight movement
+                time.sleep(0.1)
+            else:
+                adjust_direction()
+                time.sleep(0.1)
     except KeyboardInterrupt:
         print("Exiting program. Stopping the car.")
         px.stop()
