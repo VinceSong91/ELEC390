@@ -12,13 +12,14 @@ def adjust_direction():
 
     if left_sensor > 200:
         print("Left sensor detected high value! Turning right.")
-        px.set_dir_servo_angle(50)  # Adjust for sharper turns if necessary
+        turn_right(duration=3)  # Turn right for 3 seconds
     elif right_sensor > 200:
         print("Right sensor detected high value! Turning left.")
-        px.set_dir_servo_angle(-76)
+        turn_left(duration=3)  # Turn left for 3 seconds
     else:
         print("Following straight.")
         px.set_dir_servo_angle(-13)  # Neutral for straight movement
+        px.forward(10)  # Continue moving forward
 
 def detect_stop_line():
     """Check for white stop line using grayscale sensors."""
@@ -36,20 +37,18 @@ def wait_for_user_input():
     """Wait for the user to input a direction for the car."""
     while True:
         print("Please choose a direction:")
-        print("1: Close Left Turn")
-        print("2: Close Right Turn ")
+        print("1: Turn Left")
+        print("2: Turn Right")
         print("3: Move Forward")
         user_input = input("Enter your choice (1/2/3): ").strip()
 
         if user_input == "1":
             print("Turning left.")
-            px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
-            px.forward(10)  # Move forward after turning
+            turn_left(duration=3)  # Turn left for 3 seconds
             break
         elif user_input == "2":
             print("Turning right.")
-            px.set_dir_servo_angle(50)  # Adjust the angle for right turn
-            px.forward(10)  # Move forward after turning
+            turn_right(duration=3)  # Turn right for 3 seconds
             break
         elif user_input == "3":
             print("Moving forward.")
@@ -58,6 +57,22 @@ def wait_for_user_input():
             break
         else:
             print("Invalid choice, please try again.")
+
+def turn_left(duration):
+    """Turn the car left for a specified duration."""
+    px.set_dir_servo_angle(45)  # Adjust the angle for left turn
+    px.forward(10)  # Move forward while turning
+    time.sleep(duration)
+    px.set_dir_servo_angle(-13)  # Reset to neutral position
+    px.forward(10)  # Continue moving forward
+
+def turn_right(duration):
+    """Turn the car right for a specified duration."""
+    px.set_dir_servo_angle(-45)  # Adjust the angle for right turn
+    px.forward(10)  # Move forward while turning
+    time.sleep(duration)
+    px.set_dir_servo_angle(-13)  # Reset to neutral position
+    px.forward(10)  # Continue moving forward
 
 def main():
     try:
