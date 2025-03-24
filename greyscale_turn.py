@@ -40,13 +40,13 @@ def wait_for_user_input():
         print("2: Turn Right")
         print("3: Move Forward")
         user_input = input("Enter your choice (1/2/3): ").strip()
-        sensor_values = px.get_grayscale_data()
-        left_sensor = sensor_values[0]
-        right_sensor = sensor_values[2]
 
         if user_input == "1":
             print("Turning left.")
             while True:
+                sensor_values = px.get_grayscale_data()
+                left_sensor = sensor_values[0]
+                right_sensor = sensor_values[2]
                 px.forward(5)  # Move forward slowly to complete the turn
                 px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
                 if left_sensor > 200:
@@ -55,6 +55,9 @@ def wait_for_user_input():
         elif user_input == "2":
             print("Turning right.")
             while True:
+                sensor_values = px.get_grayscale_data()
+                left_sensor = sensor_values[0]
+                right_sensor = sensor_values[2]
                 px.forward(5)  # Move forward slowly to complete the turn
                 px.set_dir_servo_angle(50)  # Adjust the angle for right turn
                 if right_sensor > 200:
