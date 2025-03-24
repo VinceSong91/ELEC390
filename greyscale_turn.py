@@ -54,7 +54,7 @@ def wait_for_user_input():
         elif user_input == "3":
             print("Moving forward.")
             px.set_dir_servo_angle(-13)  # Neutral for forward movement
-            px.forward(100)  # Move forward
+            px.forward(10)  # Move forward
             break
         else:
             print("Invalid choice, please try again.")
