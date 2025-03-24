@@ -20,5 +20,5 @@ def adjust_direction():
         px.set_dir_servo_angle(0)
 
 while True:
-    car.set_speed(10)
+    px.forward(10)
     adjust_direction()
