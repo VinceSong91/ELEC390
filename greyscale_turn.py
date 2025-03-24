@@ -40,36 +40,24 @@ def wait_for_user_input():
         print("2: Turn Right")
         print("3: Move Forward")
         user_input = input("Enter your choice (1/2/3): ").strip()
+        sensor_values = px.get_grayscale_data()
+        left_sensor = sensor_values[0]
+        right_sensor = sensor_values[2]
 
         if user_input == "1":
             print("Turning left.")
-            # Keep turning left while moving forward until the left sensor detects the line
-            px.set_dir_servo_angle(-76)  # Turn left initially
-            px.forward(5)  # Move forward while turning
             while True:
-                adjust_direction()  # Continuously adjust direction based on sensor values
-                sensor_values = px.get_grayscale_data()
-                left_sensor = sensor_values[0]
-                if left_sensor > WHITE_THRESHOLD:  # When left sensor detects line
-                    print("Left line detected! Stopping turn.")
-                    px.set_dir_servo_angle(-13)  # Neutral for forward movement
+                px.forward(5)  # Move forward slowly to complete the turn
+                px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
+                if left_sensor > 200:
                     break
-                time.sleep(0.1)  # Adjust the speed of checking
-
         elif user_input == "2":
             print("Turning right.")
-            # Keep turning right while moving forward until the right sensor detects the line
-            px.set_dir_servo_angle(50)  # Turn right initially
-            px.forward(5)  # Move forward while turning
             while True:
-                adjust_direction()  # Continuously adjust direction based on sensor values
-                sensor_values = px.get_grayscale_data()
-                right_sensor = sensor_values[2]
-                if right_sensor > WHITE_THRESHOLD:  # When right sensor detects line
-                    print("Right line detected! Stopping turn.")
-                    px.set_dir_servo_angle(-13)  # Neutral for forward movement
+                px.forward(5)  # Move forward slowly to complete the turn
+                px.set_dir_servo_angle(50)  # Adjust the angle for right turn
+                if right_sensor > 200:
                     break
-                time.sleep(0.1)  # Adjust the speed of checking
 
         elif user_input == "3":
             print("Moving forward.")
