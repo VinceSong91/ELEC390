@@ -12,14 +12,13 @@ def adjust_direction():
 
     if left_sensor > 200:
         print("Left sensor detected high value! Turning right.")
-        turn_right(duration=3)  # Turn right for 3 seconds
+        px.set_dir_servo_angle(50)  # Adjust for sharper turns if necessary
     elif right_sensor > 200:
         print("Right sensor detected high value! Turning left.")
-        turn_left(duration=3)  # Turn left for 3 seconds
+        px.set_dir_servo_angle(-76)
     else:
         print("Following straight.")
         px.set_dir_servo_angle(-13)  # Neutral for straight movement
-        px.forward(10)  # Continue moving forward
 
 def detect_stop_line():
     """Check for white stop line using grayscale sensors."""
@@ -28,10 +27,10 @@ def detect_stop_line():
     
     # If all sensors detect a high value (likely a white stop line)
     if all(value > WHITE_THRESHOLD for value in sensor_values):
-        print("Stop line detected! Stopping the car.")
-        px.stop()
-        time.sleep(2)  # Pause for 2 seconds
-        wait_for_user_input()  # Wait for user input after detecting stop line
+        print("Stop line detected! Stopping the car and waiting for user input.")
+        px.stop()  # Stop the car when the stop line is detected
+        time.sleep(2)  # Pause for a moment
+        wait_for_user_input()  # Wait for user input to continue
 
 def wait_for_user_input():
     """Wait for the user to input a direction for the car."""
@@ -44,11 +43,13 @@ def wait_for_user_input():
 
         if user_input == "1":
             print("Turning left.")
-            turn_left(duration=3)  # Turn left for 3 seconds
+            px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
+            px.forward(10)  # Move forward after turning
             break
         elif user_input == "2":
             print("Turning right.")
-            turn_right(duration=3)  # Turn right for 3 seconds
+            px.set_dir_servo_angle(50)  # Adjust the angle for right turn
+            px.forward(10)  # Move forward after turning
             break
         elif user_input == "3":
             print("Moving forward.")
@@ -58,28 +59,12 @@ def wait_for_user_input():
         else:
             print("Invalid choice, please try again.")
 
-def turn_left(duration):
-    """Turn the car left for a specified duration."""
-    px.set_dir_servo_angle(45)  # Adjust the angle for left turn
-    px.forward(10)  # Move forward while turning
-    time.sleep(duration)
-    px.set_dir_servo_angle(-13)  # Reset to neutral position
-    px.forward(10)  # Continue moving forward
-
-def turn_right(duration):
-    """Turn the car right for a specified duration."""
-    px.set_dir_servo_angle(-45)  # Adjust the angle for right turn
-    px.forward(10)  # Move forward while turning
-    time.sleep(duration)
-    px.set_dir_servo_angle(-13)  # Reset to neutral position
-    px.forward(10)  # Continue moving forward
-
 def main():
     try:
         px.forward(10)  # Start moving slowly
         while True:
-            detect_stop_line()
-            adjust_direction()
+            detect_stop_line()  # Continuously check for stop line
+            adjust_direction()  # Adjust direction based on sensor data
             time.sleep(0.1)
     except KeyboardInterrupt:
         print("Exiting program. Stopping the car.")
