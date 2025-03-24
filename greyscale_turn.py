@@ -53,6 +53,7 @@ def wait_for_user_input():
             while True:
                 sensor_values = px.get_grayscale_data()
                 left_sensor = sensor_values[0]
+                right_sensor = sensor_values[2]
 
                 if right_sensor > 200:
                     print("Right lane detected! Stopping turn.")
