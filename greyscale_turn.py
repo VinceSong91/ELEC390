@@ -20,7 +20,7 @@ def adjust_direction():
         px.set_dir_servo_angle(-80)
     else:
         print("Following straight.")
-        px.set_dir_servo_angle(-5 )  # Neutral for straight movement
+        px.set_dir_servo_angle(-10)  # Neutral for straight movement
 
 def detect_stop_line():
     """Check for white stop line using grayscale sensors."""
