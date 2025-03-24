@@ -7,7 +7,7 @@ px = Picarx()
 cap = cv2.VideoCapture(0)
 NEUTRAL_ANGLE = -13
 CAMERA_TILT_ANGLE = -30
-CAMERA_PAN_ANGLE = -10  # Adjusted to turn the camera more to the left
+CAMERA_PAN_ANGLE = -15  # Adjusted to turn the camera more to the left
 px.set_cam_tilt_angle(CAMERA_TILT_ANGLE)
 px.set_cam_pan_angle(CAMERA_PAN_ANGLE)
 
