@@ -50,6 +50,7 @@ def wait_for_user_input():
                 px.forward(5)  # Move forward slowly to complete the turn
                 px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
                 if left_sensor > 200:
+                    px.set_dir_servo_angle(50)
                     break
         elif user_input == "2":
             print("Turning right.")
@@ -57,6 +58,7 @@ def wait_for_user_input():
                 px.forward(5)  # Move forward slowly to complete the turn
                 px.set_dir_servo_angle(50)  # Adjust the angle for right turn
                 if right_sensor > 200:
+                    px.set_dir_servo_angle(-76)
                     break
 
         elif user_input == "3":
