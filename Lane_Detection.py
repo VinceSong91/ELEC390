@@ -73,8 +73,8 @@ def lane_follow():
     lines = detect_lines(mask)
     lane_center = calculate_lane_center(lines, lower_75_percent_frame.shape[1])
 
-    # Adjust steering
-    steering_adjustment = np.clip((lane_center - lower_75_percent_frame.shape[1] // 2) * 0.03, -30, 30)
+    # Increase the steering adjustment factor to make it more radical
+    steering_adjustment = np.clip((lane_center - lower_75_percent_frame.shape[1] // 2) * 0.1, -30, 30)
     final_angle = NEUTRAL_ANGLE + steering_adjustment
     px.set_dir_servo_angle(final_angle)
 
