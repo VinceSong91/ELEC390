@@ -32,46 +32,49 @@ def detect_stop_line():
         time.sleep(2)  # Pause for a moment
         wait_for_user_input()  # Wait for user input to continue
 
-def wait_for_user_input():
-    """Wait for the user to input a direction for the car."""
-    while True:
-        print("Please choose a direction:")
-        print("1: Turn Left")
-        print("2: Turn Right")
-        print("3: Move Forward")
-        user_input = input("Enter your choice (1/2/3): ").strip()
+    def wait_for_user_input():
+        """Wait for the user to input a direction for the car."""
+        while True:
+            print("Please choose a direction:")
+            print("1: Turn Left")
+            print("2: Turn Right")
+            print("3: Move Forward")
+            user_input = input("Enter your choice (1/2/3): ").strip()
 
-        if user_input == "1":
-            print("Turning left.")
-            while True:
-                sensor_values = px.get_grayscale_data()
-                left_sensor = sensor_values[0]
-                right_sensor = sensor_values[2]
-                px.forward(5)  # Move forward slowly to complete the turn
+            if user_input == "1":
+                print("Turning left.")
                 px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
-                if left_sensor > 200:
-                    break
-                break 
-            
-        elif user_input == "2":
-            print("Turning right.")
-            while True:
-                sensor_values = px.get_grayscale_data()
-                left_sensor = sensor_values[0]
-                right_sensor = sensor_values[2]
-                px.forward(5)  # Move forward slowly to complete the turn
-                px.set_dir_servo_angle(50)  # Adjust the angle for right turn
-                if right_sensor > 200:
-                    break
-                break
+                px.forward(5)  # Move forward slowly while turning
+                while True:
+                    sensor_values = px.get_grayscale_data()
+                    left_sensor = sensor_values[0]
+                    if left_sensor > 200:  # Left sensor detects the line
+                        print("Left line detected! Stopping turn.")
+                        px.set_dir_servo_angle(-13)  # Straighten wheels
+                        break
+                    time.sleep(0.1)  # Allow time for sensor data to update
 
-        elif user_input == "3":
-            print("Moving forward.")
-            px.set_dir_servo_angle(-13)  # Neutral for forward movement
-            px.forward(10)  # Move forward at a reasonable speed
-            break
-        else:
-            print("Invalid choice, please try again.")
+            elif user_input == "2":
+                print("Turning right.")
+                px.set_dir_servo_angle(50)  # Adjust the angle for right turn
+                px.forward(5)  # Move forward slowly while turning
+                while True:
+                    sensor_values = px.get_grayscale_data()
+                    right_sensor = sensor_values[2]
+                    if right_sensor > 200:  # Right sensor detects the line
+                        print("Right line detected! Stopping turn.")
+                        px.set_dir_servo_angle(-13)  # Straighten wheels
+                        break
+                    time.sleep(0.1)
+
+            elif user_input == "3":
+                print("Moving forward.")
+                px.set_dir_servo_angle(-13)  # Neutral for forward movement
+                px.forward(10)  # Move forward at a reasonable speed
+                break
+            else:
+                print("Invalid choice, please try again.")
+
 
 def main():
     try:
