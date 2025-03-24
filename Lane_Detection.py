@@ -5,6 +5,8 @@ import time
 
 px = Picarx()
 cap = cv2.VideoCapture(0)  # Initialize the camera
+NEUTRAL_ANGLE = -13  # Neutral steering position for straight driving
+CAMERA_TILT_ANGLE = -30  # Lower camera to focus on lanes
 
 def preprocess_image(frame):
     """Convert to grayscale, apply blur, and detect edges using Canny."""
@@ -60,7 +62,8 @@ def lane_follow():
 
     # Adjust steering based on lane center
     steering_adjustment = np.clip((lane_center - frame.shape[1] // 2) * 0.03, -30, 30)
-    px.set_dir_servo_angle(steering_adjustment)
+    final_angle = NEUTRAL_ANGLE + steering_adjustment
+    px.set_dir_servo_angle(final_angle)
 
     # Visualization
     draw_lines(frame, lines)
@@ -68,7 +71,7 @@ def lane_follow():
     cv2.imshow("Lane Detection", frame)
 
 try:
-    px.set_cam_tilt_angle(-20)  # Adjust the camera angle if needed
+    px.set_cam_tilt_angle(CAMERA_TILT_ANGLE)  # Lower the camera to focus on lanes
     px.forward(20)  # Start moving forward
 
     while True:
