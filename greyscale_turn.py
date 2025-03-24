@@ -12,10 +12,10 @@ def adjust_direction():
 
     if left_sensor > 200:
         print("Left sensor detected high value! Turning right.")
-        px.set_dir_servo_angle(30)  # Adjust the angle as needed
+        px.set_dir_servo_angle(50)  # Adjust the angle as needed
     elif right_sensor > 200:
         print("Right sensor detected high value! Turning left.")
-        px.set_dir_servo_angle(-48)  # Adjust the angle as needed
+        px.set_dir_servo_angle(-68)  # Adjust the angle as needed
     else:
         px.set_dir_servo_angle(-14)
 
