@@ -51,9 +51,8 @@ def wait_for_user_input():
 
                 if left_sensor > 200:  # Left sensor detects the line
                     print("Left line detected! Stopping turn.")
-                    px.set_dir_servo_angle(-13)  # Straighten wheels
+                    main()
                     break
-                time.sleep(0.1)  # Allow time for sensor data to update
 
         elif user_input == "2":
             print("Turning right.")
@@ -64,9 +63,8 @@ def wait_for_user_input():
                 right_sensor = sensor_values[2]
                 if right_sensor > 200:  # Right sensor detects the line
                     print("Right line detected! Stopping turn.")
-                    px.set_dir_servo_angle(-13)  # Straighten wheels
+                    main()
                     break
-                time.sleep(0.1)
 
         elif user_input == "3":
             print("Moving forward.")
