@@ -27,6 +27,8 @@ class Picarx(object):
     PRESCALER = 10
     TIMEOUT = 0.02
 
+    HEADLIGHT_BRIGHTNESS = 40
+
     # servo_pins: camera_pan_servo, camera_tilt_servo, direction_servo
     # motor_pins: left_swicth, right_swicth, left_pwm, right_pwm
     # grayscale_pins: 3 adc channels
@@ -39,6 +41,7 @@ class Picarx(object):
                 ultrasonic_pins:list=['D2','D3'],
                 brake_lights_pin: str = 'P4',
                 turn_signal_pins: list = ['P5', 'P6'],
+                headlight_pin: str = 'P10',
                 config:str=CONFIG,
                 blink_interval: float = 0.5
                 ):
@@ -116,6 +119,12 @@ class Picarx(object):
         self._blink_right_stop_event = threading.Event()
         self._blink_left_thread = None
         self._blink_right_thread = None
+
+        # Headlight setup (Always On at Low Brightness)
+        self.headlights = PWM(headlight_pin)
+        self.headlights.period(self.PERIOD)
+        self.headlights.prescaler(self.PRESCALER)
+        self.headlights.pulse_width_percent(self.HEADLIGHT_BRIGHTNESS)
 
     def brake_lights_on(self):
         # Turn on the brake light LED (set duty cycle to 100%).
