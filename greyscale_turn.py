@@ -15,7 +15,7 @@ def adjust_direction():
         px.set_dir_servo_angle(50)  # Adjust for sharper turns if necessary
     elif right_sensor > 200:
         print("Right sensor detected high value! Turning left.")
-        px.set_dir_servo_angle(-68)
+        px.set_dir_servo_angle(-78)
     else:
         print("Following straight.")
         px.set_dir_servo_angle(-14)  # Neutral for straight movement
