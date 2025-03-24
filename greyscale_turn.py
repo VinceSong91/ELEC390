@@ -5,39 +5,20 @@ px = Picarx()
 WHITE_THRESHOLD = 700  # Adjust this based on your environment
 
 def adjust_direction():
-    """Adjust the car's direction to hug the right side using grayscale sensor values."""
+    """Adjust the car's direction based on grayscale sensor values."""
     sensor_values = px.get_grayscale_data()
     left_sensor = sensor_values[0]
     right_sensor = sensor_values[2]
 
-<<<<<<< HEAD
-    # If the right sensor is not detecting the line, move slightly right to find it
-    if right_sensor < 200:
-        print("Right sensor lost the line. Adjusting right.")
-        px.set_dir_servo_angle(60)  # Turn right to find the line again
-
-    # If the left sensor detects the line while the right sensor does not, correct to the left
-    elif left_sensor > 200 and right_sensor < 200:
-        print("Left sensor detected line, adjusting left to hug right side.")
-        px.set_dir_servo_angle(-40)  # Moderate left turn to get back to the right side
-
-    # If the right sensor detects the line, maintain a slight right bias
-    elif right_sensor > 200:
-        print("Hugging the right side.")
-        px.set_dir_servo_angle(-5)  # Slight right bias for hugging the line
-
-=======
     if left_sensor > 200:
         print("Left sensor detected high value! Turning right.")
-        px.set_dir_servo_angle(50)  # Adjust for sharper turns if necessary
+        px.set_dir_servo_angle(60)  # Adjust for sharper turns if necessary
     elif right_sensor > 200:
         print("Right sensor detected high value! Turning left.")
-        px.set_dir_servo_angle(-76)
->>>>>>> parent of 5d8391d (Merge branch 'main' of https://github.com/VinceSong91/ELEC390)
+        px.set_dir_servo_angle(-80)
     else:
         print("Following straight.")
         px.set_dir_servo_angle(-13)  # Neutral for straight movement
-
 
 def detect_stop_line():
     """Check for white stop line using grayscale sensors."""
@@ -81,7 +62,7 @@ def wait_for_user_input():
             px.turn_signal_right_on()
 
             print("Turning right.")
-            px.set_dir_servo_angle(30)  # Adjust the angle for right turn
+            px.set_dir_servo_angle(25)  # Adjust the angle for right turn
             px.forward(5)  # Move forward slowly while turning
             time.sleep(1)
             while True:
