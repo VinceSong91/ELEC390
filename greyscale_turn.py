@@ -43,16 +43,30 @@ def wait_for_user_input():
 
         if user_input == "1":
             print("Turning left.")
-            px.forward(5)  # Move forward slowly to complete the turn
-            px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
-            time.sleep(3)
-            break
+            # Keep turning left until the left sensor detects the line
+            while True:
+                adjust_direction()  # Adjust direction based on sensor values
+                sensor_values = px.get_grayscale_data()
+                left_sensor = sensor_values[0]
+                if left_sensor > WHITE_THRESHOLD:  # When left sensor detects line
+                    print("Left line detected! Stopping turn.")
+                    px.stop()  # Stop the car once line is detected
+                    break
+                time.sleep(0.1)  # Adjust the speed of checking
+
         elif user_input == "2":
             print("Turning right.")
-            px.forward(5)  # Move forward slowly to complete the turn
-            px.set_dir_servo_angle(50)  # Adjust the angle for right turn
-            time.sleep(3.3)
-            break
+            # Keep turning right until the right sensor detects the line
+            while True:
+                adjust_direction()  # Adjust direction based on sensor values
+                sensor_values = px.get_grayscale_data()
+                right_sensor = sensor_values[2]
+                if right_sensor > WHITE_THRESHOLD:  # When right sensor detects line
+                    print("Right line detected! Stopping turn.")
+                    px.stop()  # Stop the car once line is detected
+                    break
+                time.sleep(0.1)  # Adjust the speed of checking
+
         elif user_input == "3":
             print("Moving forward.")
             px.set_dir_servo_angle(-13)  # Neutral for forward movement
