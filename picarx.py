@@ -37,6 +37,7 @@ class Picarx(object):
                 motor_pins:list=['D4', 'D5', 'P13', 'P12'],
                 grayscale_pins:list=['A0', 'A1', 'A2'],
                 ultrasonic_pins:list=['D2','D3'],
+                brake_lights_pin: str = 'P4',
                 config:str=CONFIG,
                 ):
 
@@ -91,6 +92,20 @@ class Picarx(object):
         # --------- ultrasonic init ---------
         trig, echo= ultrasonic_pins
         self.ultrasonic = Ultrasonic(Pin(trig), Pin(echo, mode=Pin.IN, pull=Pin.PULL_DOWN))
+
+        # --------- brake light init using PWM on a single pin ---------
+        self.brake_light = PWM(brake_lights_pin)
+        self.brake_light.period(self.PERIOD)
+        self.brake_light.prescaler(self.PRESCALER)
+        self.brake_lights_off()
+
+        def brake_lights_on(self):
+            # Turn on the brake light LED (set duty cycle to 100%).
+            self.brake_light.pulse_width_percent(100)
+
+        def brake_lights_off(self):
+            # Turn off the brake light LED (set duty cycle to 0%).'''
+            self.brake_light.pulse_width_percent(0)
         
     def set_motor_speed(self, motor, speed):
         ''' set motor speed
@@ -100,6 +115,8 @@ class Picarx(object):
         param speed: speed
         type speed: int      
         '''
+        self.brake_lights_off()
+
         speed = constrain(speed, -100, 100)
         motor -= 1
         if speed >= 0:
@@ -192,6 +209,8 @@ class Picarx(object):
             self.set_motor_speed(2, speed)  
 
     def forward(self, speed):
+        self.brake_lights_off()
+
         current_angle = self.dir_current_angle
         if current_angle != 0:
             abs_current_angle = abs(current_angle)
@@ -212,6 +231,7 @@ class Picarx(object):
         '''
         Execute twice to make sure it stops
         '''
+        self.brake_lights_on()
         for _ in range(2):
             self.motor_speed_pins[0].pulse_width_percent(0)
             self.motor_speed_pins[1].pulse_width_percent(0)
