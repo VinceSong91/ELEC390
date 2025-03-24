@@ -1,124 +1,85 @@
 import cv2
 import numpy as np
-from picarx import Picarx 
-import time
+from picarx import Picarx
 
-# Initialize PiCar-X
 px = Picarx()
+cap = cv2.VideoCapture(0)  # Open camera
 
-# Function to detect lanes
-def detect_lanes(frame):
-    # Convert to grayscale
+def preprocess_image(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    
-    # Apply Gaussian blur
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
-    
-    # Detect edges using Canny
-    edges = cv2.Canny(blur, 50, 150)
-    
-    # Define region of interest (ROI) for a downward-tilted camera
-    height, width = edges.shape
-    mask = np.zeros_like(edges)
-    
-    # Adjusted polygon for a more downward-tilted camera
-    polygon = np.array([[
-        (width * 0.3, height * 0.5),  # Top-left point shifted down and right
-        (width * 0.1, height),        # Bottom-left point
-        (width * 0.9, height),        # Bottom-right point
-        (width * 0.7, height * 0.5),  # Top-right point shifted down and left
-    ]], np.int32)
-    
-    cv2.fillPoly(mask, polygon, 255)
-    masked_edges = cv2.bitwise_and(edges, mask)
-    
-    # Detect lines using Hough Transform
-    lines = cv2.HoughLinesP(masked_edges, 1, np.pi / 180, 50, minLineLength=50, maxLineGap=100)
-    
-    # Separate and classify lines
-    right_lines = []
-    
-    if lines is not None:
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            slope = (y2 - y1) / (x2 - x1) if (x2 - x1) != 0 else 0
-            
-            # Classify lines based on slope and position (only right lane)
-            if slope > 0.5:  # Right lane line
-                right_lines.append(line[0])
-    
-    # Draw detected lines on the frame
-    def draw_lines(img, lines, color, thickness):
-        for line in lines:
-            x1, y1, x2, y2 = line
-            cv2.line(img, (x1, y1), (x2, y2), color, thickness)
-    
-    draw_lines(frame, right_lines, (0, 0, 255), 5)  # Red for right lane
-    
-    return frame, right_lines
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(blurred, 30, 100)  # Adjusted thresholds
+    return edges
 
-# Function to adjust wheel steering and camera tilt based on the right lane
-def follow_right_lane(right_lines, last_reset_time):
-    if right_lines:
-        # Calculate the average x-position of the right lane
-        right_lane_pos = np.mean([line[0] for line in right_lines])
-        frame_center = 320  # Assuming frame width is 640px
-        
-        # Calculate deviation from the center
-        deviation = right_lane_pos - frame_center
-        
-        # Adjust wheel steering based on deviation
-        steering_angle = -deviation / 50 - 15  # Increase sensitivity for steering
-        px.set_dir_servo_angle(steering_angle)
-        print(f"Steering angle: {steering_angle:.2f}")
-        
-        # Adjust camera tilt to keep the right lane centered
-        camera_tilt = -deviation / 100  # Increase sensitivity for camera tilt
-        px.set_cam_tilt_angle(camera_tilt)
-        print(f"Camera tilt: {camera_tilt:.2f}")
-        
-        # Move forward
-        px.forward(50)
-        
-        # Periodic wheel reset to correct drift
-        current_time = time.time()
-        if current_time - last_reset_time >= 1.0:  # Reset every 1 second
-            px.set_dir_servo_angle(20)  # Turn wheels to the right
-            time.sleep(0.1)  # Hold for a short duration
-            px.set_dir_servo_angle(steering_angle)  # Return to normal steering angle
-            last_reset_time = current_time  # Update the last reset time
-    else:
-        # No right lane detected, stop the car
-        px.stop()
-        print("No right lane detected! Stopping the car.")
-    
-    return last_reset_time
+def detect_lines(edges):
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 50, minLineLength=50, maxLineGap=150)
+    return lines if lines is not None else np.array([])
 
-# Capture video from the PiCar-X camera
-cap = cv2.VideoCapture(0)  # Use 0 for the default camera
+def calculate_lane_center(lines, frame_width):
+    left_x, right_x = [], []
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        slope = (y2 - y1) / (x2 - x1 + 1e-6)  # Avoid division by zero
+        if -0.5 < slope < 0.5:  # Relaxed slope filtering
+            continue
+        (left_x if slope < 0 else right_x).append((x1 + x2) // 2)
 
-# Initialize last reset time
-last_reset_time = time.time()
+    if left_x and right_x:
+        left_avg = np.mean(left_x)
+        right_avg = np.mean(right_x)
+        return int((left_avg + right_avg) // 2)
+    elif left_x:
+        return int(np.mean(left_x))  # If no right lines, use left lines
+    elif right_x:
+        return int(np.mean(right_x))  # If no left lines, use right lines
+    return frame_width // 2  # Default to center if no lines detected
 
-while True:
+def draw_lines(frame, lines):
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 3)
+
+def lane_follow():
     ret, frame = cap.read()
     if not ret:
-        break
-    
-    # Detect lanes
-    output_frame, right_lines = detect_lanes(frame)
-    
-    # Follow the right lane
-    last_reset_time = follow_right_lane(right_lines, last_reset_time)
-    
-    # Display the output
-    cv2.imshow("Lane Detection", output_frame)
-    
-    # Exit on 'q' key press
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        return
+   
+    edges = preprocess_image(frame)
+    lines = detect_lines(edges)
+    lane_center = calculate_lane_center(lines, frame.shape[1])
 
-# Release resources
-cap.release()
-cv2.destroyAllWindows()
-px.stop()
+    # Adjust steering
+    steering_adjustment = np.clip((lane_center - frame.shape[1] // 2) * 0.03, -30, 30)  # Adjusted multiplier
+    px.set_dir_servo_angle(steering_adjustment)
+
+    # Draw lines on the frame
+    draw_lines(frame, lines)
+   
+    # Draw the lane center point
+    cv2.circle(frame, (lane_center, frame.shape[0] // 2), 5, (0, 0, 255), -1)
+   
+    # Show the camera feed
+    cv2.imshow("Camera", frame)
+
+try:
+    px.set_cam_tilt_angle(-20)  # Adjust camera tilt angle if necessary
+    while True:
+        lane_follow()
+
+        # Check for key presses
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('w'):
+            px.foward(20)
+            print("Moving forward")
+        elif key == ord('s'):
+            px.foward(0)
+            print("Stopping")
+        elif key == ord('q'):
+            print("Exiting...")
+            break
+except KeyboardInterrupt:
+    print("\nStopping...")
+finally:
+    cap.release()
+    px.stop()
+    cv2.destroyAllWindows()  # Close the camera window properly
