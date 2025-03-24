@@ -30,8 +30,34 @@ def detect_stop_line():
         print("Stop line detected! Stopping the car.")
         px.stop()
         time.sleep(2)  # Pause for 2 seconds
-        print("Resuming movement...")
-        px.forward(10)
+        wait_for_user_input()  # Wait for user input after detecting stop line
+
+def wait_for_user_input():
+    """Wait for the user to input a direction for the car."""
+    while True:
+        print("Please choose a direction:")
+        print("1: Close Left Turn")
+        print("2: Close Right Turn ")
+        print("3: Move Forward")
+        user_input = input("Enter your choice (1/2/3): ").strip()
+
+        if user_input == "1":
+            print("Turning left.")
+            px.set_dir_servo_angle(-76)  # Adjust the angle for left turn
+            px.forward(10)  # Move forward after turning
+            break
+        elif user_input == "2":
+            print("Turning right.")
+            px.set_dir_servo_angle(50)  # Adjust the angle for right turn
+            px.forward(10)  # Move forward after turning
+            break
+        elif user_input == "3":
+            print("Moving forward.")
+            px.set_dir_servo_angle(-13)  # Neutral for forward movement
+            px.forward(10)  # Move forward
+            break
+        else:
+            print("Invalid choice, please try again.")
 
 def main():
     try:
