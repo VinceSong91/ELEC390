@@ -127,6 +127,122 @@ def detect_stop_line():
 # [Keep all your existing lane following functions unchanged]
 # remove_white_boards, mask_white_yellow, preprocess_image, 
 # detect_lines, calculate_lane_center, draw_lines, lane_follow
+def remove_white_boards(frame):
+    height, width = frame.shape[:2]
+    # Define margins - adjust these values to cover your white board areas
+    left_margin = int(width * 0.019)   # Left 10% of the image
+    right_margin = int(width * 0.995)   # Right 10% of the image
+   
+    # Draw black rectangles on the left and right sides
+    cv2.rectangle(frame, (0, 0), (left_margin, height), (0, 0, 0), thickness=-1)
+    cv2.rectangle(frame, (right_margin, 0), (width, height), (0, 0, 0), thickness=-1)
+   
+    return frame
+
+def mask_white_yellow(frame):
+    """ Mask white and yellow lane lines in an image. """
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # Define color ranges
+    lower_yellow = np.array([20, 100, 100])
+    upper_yellow = np.array([55, 255, 255])
+   
+    lower_white = np.array([0, 0, 200])
+    upper_white = np.array([180, 25, 255])
+
+    # Create masks
+    mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+    mask_white = cv2.inRange(hsv, lower_white, upper_white)
+
+    # Combine masks
+    combined_mask = cv2.bitwise_or(mask_yellow, mask_white)
+    return combined_mask
+
+
+def preprocess_image(frame):
+    """ Convert the frame to edge-detected output for line detection. """
+    frame = remove_white_boards(frame)
+    masked = mask_white_yellow(frame)  
+    blurred = cv2.GaussianBlur(masked, (5, 5), 0)
+    edges = cv2.Canny(blurred, 50, 150)  
+    return edges
+
+
+def detect_lines(edges):
+    """ Detect lane lines using Hough Transform. """
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 50, minLineLength=50, maxLineGap=150)
+    return lines if lines is not None else np.array([])
+
+
+def calculate_lane_center(lines, frame_width):
+    # left_inside_edges = []
+    right_inside_edges = []
+   
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        # Calculate slope and filter out near-horizontal lines
+        slope = (y2 - y1) / (x2 - x1 + 1e-6)
+        if abs(slope) < 0.5:
+            continue
+
+        if slope > 0:
+            inside_edge = min(x1, x2)
+            right_inside_edges.append(inside_edge)
+       
+        # if slope < 0:
+        #     # For left lane lines, pick the inside edge (max x value)
+        #     inside_edge = max(x1, x2)
+        #     left_inside_edges.append(inside_edge)
+        # else:
+        #     # For right lane lines, pick the inside edge (min x value)
+        #     inside_edge = min(x1, x2)
+        #     right_inside_edges.append(inside_edge)
+
+   
+    # If both left and right inside edges are detected, the lane center is their average.
+    # if left_inside_edges and right_inside_edges:
+    #     left_avg = np.mean(left_inside_edges)
+    #     right_avg = np.mean(right_inside_edges)
+    #     lane_center = int((left_avg + right_avg) / 2)
+    # elif right_inside_edges:
+    #     lane_center = int(np.mean(right_inside_edges)) - 125
+    if right_inside_edges:
+        lane_center = int(np.mean(right_inside_edges)) - 125
+    else:
+        lane_center = frame_width // 2  # Fallback to image center if no lane lines found
+ 
+    return lane_center
+
+
+def draw_lines(frame, lines):
+    """ Draw detected lane lines on the frame. """
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 3)
+
+
+def lane_follow():
+    """ Perform lane following based on camera input. """
+    ret, frame = cap.read()
+    if not ret or frame is None or frame.shape[0] == 0:
+        print("Camera error, skipping frame.")
+        return
+
+    frame = remove_white_boards(frame)
+    edges = preprocess_image(frame)
+    lines = detect_lines(edges)
+    lane_center = calculate_lane_center(lines, frame.shape[1])
+
+    # Adjust steering with a controlled response
+    steering_adjustment = np.clip((lane_center - frame.shape[1] // 2) * 0.03, -30, 30)
+    px.set_dir_servo_angle(steering_adjustment)
+
+    # Draw lane information
+    draw_lines(frame, lines)
+    cv2.circle(frame, (lane_center, frame.shape[0] // 2), 5, (0, 0, 255), -1)
+
+    # Show the processed camera feed
+    cv2.imshow("Camera", frame)
 
 def main():
     try:
