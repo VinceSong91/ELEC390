@@ -7,7 +7,7 @@ from queue import Queue
 
 px = Picarx()
 cap = cv2.VideoCapture(0)
-NEUTRAL_ANGLE = -10
+NEUTRAL_ANGLE = -12
 CAMERA_TILT_ANGLE = -25
 CAMERA_PAN_ANGLE = -15
 px.set_cam_tilt_angle(CAMERA_TILT_ANGLE)
@@ -112,7 +112,6 @@ def detect_stop_line():
         return
         
     sensor_values = px.get_grayscale_data()
-    print("Grayscale sensor readings:", sensor_values)
     
     if all(value > WHITE_THRESHOLD for value in sensor_values):
         print("Stop line detected!")
@@ -142,7 +141,6 @@ def remove_white_boards(frame):
     return frame
 
 def mask_white_yellow(frame):
-    """ Mask white and yellow lane lines in an image. """
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # Define color ranges
