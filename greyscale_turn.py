@@ -263,6 +263,7 @@ def check_obstacle():
             print("Obstacle cleared. Resuming.")
             OBSTACLE_DETECTED = False
             if not STOPPED:
+                time.sleep(1)
                 px.forward(DRIVING_SPEED)
         time.sleep(0.1)
 
