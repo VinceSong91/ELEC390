@@ -7,7 +7,7 @@ from queue import Queue
 
 px = Picarx()
 cap = cv2.VideoCapture(0)
-NEUTRAL_ANGLE = -11
+NEUTRAL_ANGLE = -10.5
 CAMERA_TILT_ANGLE = -25
 CAMERA_PAN_ANGLE = -15
 px.set_cam_tilt_angle(CAMERA_TILT_ANGLE)
@@ -68,7 +68,7 @@ def right_turn():
     """Execute a right turn maneuver while maintaining lane following"""
     print("Initiating right turn")
     px.turn_signal_right_on()
-    px.forward(5)
+    px.forward(10)
     px.set_dir_servo_angle(30)  # Right turn angle
     time.sleep(3.5)  # Turn for 1 second
     px.turn_signal_right_off()
@@ -79,7 +79,7 @@ def left_turn():
     """Execute a left turn maneuver while maintaining lane following"""
     print("Initiating left turn")
     px.turn_signal_left_on()
-    px.forward(5)
+    px.forward(10)
     px.set_dir_servo_angle(-25)  # Left turn angle
     time.sleep(3.25)  # Turn for 1 second
     px.turn_signal_left_off()
