@@ -7,7 +7,7 @@ from queue import Queue
 
 px = Picarx()
 cap = cv2.VideoCapture(0)
-NEUTRAL_ANGLE = -12
+NEUTRAL_ANGLE = -11
 CAMERA_TILT_ANGLE = -25
 CAMERA_PAN_ANGLE = -15
 px.set_cam_tilt_angle(CAMERA_TILT_ANGLE)
