@@ -191,8 +191,6 @@ def main():
                 time.sleep(0.1)
                 distance = px.get_distance()
             px.stop()
-            while px.get_distance() < obstacle_threshold:
-                time.sleep(2)
             px.forward(5)
             time.sleep(0.1)
 
