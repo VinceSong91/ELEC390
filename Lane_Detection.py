@@ -93,7 +93,7 @@ def lane_follow():
 
 
 try:
-    px.forward(20)
+    #px.forward(20)
     while True:
         lane_follow()
         if cv2.waitKey(1) & 0xFF == ord('q'):
