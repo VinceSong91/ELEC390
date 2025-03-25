@@ -54,21 +54,17 @@ def average_line(lines):
     return int(x1_avg), int(y1_avg), int(x2_avg), int(y2_avg)
 
 
-def detect_stop_line(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
-
-    # Detect edges using Canny
-    edges = cv2.Canny(thresh, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=100, minLineLength=100, maxLineGap=10)
-
-    # If we find lines, return True (stop line detected)
-    if lines is not None:
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
-            if y2 > 0.85 * frame.shape[0]:  # If the line is near the bottom of the frame (indicating a stop line)
-                return True
-    return False
+def detect_stop_line():
+    """Check for white stop line using grayscale sensors."""
+    sensor_values = px.get_grayscale_data()
+    print("Grayscale sensor readings:", sensor_values)
+    
+    # If all sensors detect a high value (likely a white stop line)
+    if all(value > WHITE_THRESHOLD for value in sensor_values):
+        print("Stop line detected! Stopping the car and waiting for user input.")
+        px.stop()  # Stop the car when the stop line is detected
+        time.sleep(2)  # Pause for a moment
+        wait_for_user_input()  # Wait for user input to continue
 
 def lane_follow():
     ret, frame = cap.read()
@@ -176,11 +172,9 @@ def main():
         px.forward(10)
         while True:
             ret, frame = cap.read()
-            adjust_direction_with_grayscale()
-
             # Check for stop line
-            if detect_stop_line(frame):
-                wait_for_user_input()
+            detect_stop_line()
+            adjust_direction_with_grayscale()
 
             time.sleep(0.1)
     except KeyboardInterrupt:
