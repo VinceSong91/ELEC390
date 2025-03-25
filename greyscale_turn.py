@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import threading
 from queue import Queue
-from robot_hat import Music
+from music import Music
 
 music = Music()
 
