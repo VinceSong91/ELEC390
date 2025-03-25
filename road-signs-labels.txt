@@ -1,0 +1,6 @@
+stop_sign
+duck
+direction_sign
+yield_sign
+pylon
+no_entry
