@@ -84,7 +84,7 @@ def left_turn():
     time.sleep(1)
     px.forward(10)
     px.set_dir_servo_angle(-27)  # Left turn angle
-    time.sleep(3.25)  # Turn for 1 second
+    time.sleep(3)  # Turn for 1 second
     px.turn_signal_left_off()
     px.set_dir_servo_angle(NEUTRAL_ANGLE)
     print("Left turn completed")
