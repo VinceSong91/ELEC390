@@ -182,12 +182,18 @@ def main():
         while True:
             # Main loop handles stop line and direction adjustments.
             lane_follow()
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
             detect_stop_line()  
             adjust_direction()
             time.sleep(0.1)
     except KeyboardInterrupt:
         print("Exiting program. Stopping the car.")
         px.stop()
+    finally:
+        cap.release()
+        px.stop()
+        cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
