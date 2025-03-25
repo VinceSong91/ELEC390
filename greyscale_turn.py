@@ -53,16 +53,8 @@ def right_turn():
     px.forward(TURN_SPEED)
     time.sleep(TURN_DELAY)
     px.set_dir_servo_angle(27)  # Adjust the angle for right turn
-    
-    while True:
-        sensor_values = px.get_grayscale_data()
-        right_sensor = sensor_values[2]
-        if right_sensor > 200:  # Right sensor detects the line
-            print("Right line detected! Completing turn.")
-            px.turn_signal_right_off()
-            px.set_dir_servo_angle(NEUTRAL_ANGLE)
-            break
-        time.sleep(0.1)
+
+    time.sleep(0.1)
 
 def left_turn():
     """Execute a left turn maneuver."""
@@ -71,23 +63,8 @@ def left_turn():
     px.forward(TURN_SPEED)
     time.sleep(TURN_DELAY)
     px.set_dir_servo_angle(-25)  # Adjust the angle for left turn
-    
-    while True:
-        sensor_values = px.get_grayscale_data()
-        left_sensor = sensor_values[0]
-        right_sensor = sensor_values[2]
 
-        if right_sensor > 200:
-            print("Right lane detected! Completing turn.")
-            px.turn_signal_left_off()
-            px.set_dir_servo_angle(NEUTRAL_ANGLE)
-            break
-        elif left_sensor > 200:  # Left sensor detects the line
-            print("Left line detected! Completing turn.")
-            px.turn_signal_left_off()
-            px.set_dir_servo_angle(NEUTRAL_ANGLE)
-            break
-        time.sleep(0.1)
+    time.sleep(0.1)
 
 command_queue = Queue()
 
@@ -227,6 +204,7 @@ def lane_follow():
 def main():
     try:
         px.forward(5)  # Start moving slowly
+        get_user_input()
         while True:
             # Main loop handles stop line and direction adjustments.
             lane_follow()
@@ -234,7 +212,6 @@ def main():
                 break
             detect_stop_line()  
             adjust_direction()
-            get_user_input()
             time.sleep(0.1)
     except KeyboardInterrupt:
         print("Exiting program. Stopping the car.")
