@@ -7,7 +7,6 @@ px = Picarx()
 cap = cv2.VideoCapture(0)
 NEUTRAL_ANGLE = -13.5
 WHITE_THRESHOLD = 700  # Adjust this based on your environment
-obstacle_threshold = 7 # cm
 
 def adjust_direction():
     """Adjust the car's direction based on grayscale sensor values."""
@@ -181,19 +180,12 @@ def lane_follow():
 
 def main():
     try:
-        px.forward(10)  # Start moving slowly
+        px.forward(5)  # Start moving slowly
         while True:
-            distance = px.get_distance()
-            while distance is None or distance > obstacle_threshold:
-                lane_follow()
-                detect_stop_line()  # Continuously check for stop line
-                adjust_direction()  # Adjust direction based on sensor data
-                time.sleep(0.1)
-                distance = px.get_distance()
-            px.stop()
-            px.forward(5)
+            # Main loop handles stop line and direction adjustments.
+            detect_stop_line()  
+            adjust_direction()
             time.sleep(0.1)
-
     except KeyboardInterrupt:
         print("Exiting program. Stopping the car.")
         px.stop()

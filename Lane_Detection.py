@@ -3,184 +3,104 @@ import numpy as np
 from picarx import Picarx
 import time
 
-# Camera and steering calibration constants
-NEUTRAL_ANGLE = -13.5
-CAMERA_TILT_ANGLE = -20
-CAMERA_PAN_ANGLE = -10
-WHITE_THRESHOLD = 200  # Adjusted threshold for grayscale sensor
-
-# Initialize robot and camera
 px = Picarx()
 cap = cv2.VideoCapture(0)
+NEUTRAL_ANGLE = -13.5
+CAMERA_TILT_ANGLE = -20
+CAMERA_PAN_ANGLE = -10 # Further adjust to turn the camera more to the left
 px.set_cam_tilt_angle(CAMERA_TILT_ANGLE)
 px.set_cam_pan_angle(CAMERA_PAN_ANGLE)
 
+
 def preprocess_image(frame):
+    """Apply color filtering to isolate white and yellow lanes."""
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    white_lower = np.array([0, 0, 200])
-    white_upper = np.array([180, 55, 255])
+    # White lane detection
+    white_lower = np.array([0, 0, 180])
+    white_upper = np.array([180, 30, 255])
     white_mask = cv2.inRange(hsv, white_lower, white_upper)
 
-    yellow_lower = np.array([15, 80, 100])
+    # Yellow lane detection with expanded hue range
+    yellow_lower = np.array([15, 100, 100])
     yellow_upper = np.array([40, 255, 255])
     yellow_mask = cv2.inRange(hsv, yellow_lower, yellow_upper)
 
-    kernel = np.ones((5, 5), np.uint8)
-    white_mask = cv2.morphologyEx(white_mask, cv2.MORPH_CLOSE, kernel)
-    yellow_mask = cv2.morphologyEx(yellow_mask, cv2.MORPH_CLOSE, kernel)
+    combined_mask = cv2.bitwise_or(white_mask, yellow_mask)
+    return combined_mask
 
-    return white_mask, yellow_mask
 
 def detect_lines(mask):
+    """Detect lines using Hough Transform."""
     edges = cv2.Canny(mask, 50, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=150)
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 50, minLineLength=50, maxLineGap=150)
     return lines if lines is not None else []
 
-def average_line(lines):
-    if len(lines) == 0:
-        return None
-    lines = [line[0] for line in lines if len(line) == 4]
-    
-    if len(lines) == 0:
-        return None
-    
-    x1_avg = np.mean([line[0] for line in lines])
-    y1_avg = np.mean([line[1] for line in lines])
-    x2_avg = np.mean([line[2] for line in lines])
-    y2_avg = np.mean([line[3] for line in lines])
-    
-    return int(x1_avg), int(y1_avg), int(x2_avg), int(y2_avg)
 
+def calculate_lane_center(lines, frame_width):
+    """Calculate lane center based on detected lines."""
+    left_x, right_x = [], []
 
-def detect_stop_line():
-    """Check for white stop line using grayscale sensors."""
-    sensor_values = px.get_grayscale_data()
-    print("Grayscale sensor readings:", sensor_values)
-    
-    # Adjusted stop line detection logic based on grayscale sensor values
-    if any(value > WHITE_THRESHOLD for value in sensor_values):
-        print("Stop line detected! Stopping the car and waiting for user input.")
-        px.stop()  # Stop the car when the stop line is detected
-        time.sleep(2)  # Pause for a moment
-        wait_for_user_input()  # Wait for user input to continue
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        slope = (y2 - y1) / (x2 - x1 + 1e-6)
+        if -0.5 < slope < 0.5:  # Exclude horizontal lines
+            continue
+        (left_x if slope < 0 else right_x).append((x1 + x2) // 2)
+
+    if left_x and right_x:
+        lane_center = (np.mean(left_x) + np.mean(right_x)) // 2
+    elif left_x:
+        lane_center = np.mean(left_x)
+    elif right_x:
+        lane_center = np.mean(right_x)
+    else:
+        lane_center = frame_width // 2
+
+    return int(lane_center)
+
 
 def lane_follow():
     ret, frame = cap.read()
     if not ret:
         return
 
+    # Crop the frame to only the lower 75% of the image
     height, width = frame.shape[:2]
-    roi = frame[int(height * 0.25):, :]
+    lower_75_percent_frame = frame[int(height * 0.25):, :]  # 75% of the lower part
 
-    white_mask, yellow_mask = preprocess_image(roi)
-    white_lines = detect_lines(white_mask)
-    yellow_lines = detect_lines(yellow_mask)
+    mask = preprocess_image(lower_75_percent_frame)
+    lines = detect_lines(mask)
+    lane_center = calculate_lane_center(lines, lower_75_percent_frame.shape[1])
 
-    left_line = average_line(yellow_lines)
-    right_line = average_line(white_lines)
-
-    if left_line and right_line:
-        lane_center = (left_line[0] + right_line[2]) // 2
-    elif left_line:
-        lane_center = left_line[0] + (width // 4)
-    elif right_line:
-        lane_center = right_line[2] - (width // 4)
-    else:
-        lane_center = width // 2
-
-    steering_adjustment = np.clip((lane_center - (width // 2)) * 0.03, -30, 30)
+    # Adjust steering
+    steering_adjustment = np.clip((lane_center - lower_75_percent_frame.shape[1] // 2) * 0.03, -30, 30)
     final_angle = NEUTRAL_ANGLE + steering_adjustment
-    px.set_dir_servo_angle(final_angle)
+    #px.set_dir_servo_angle(final_angle)
 
-def adjust_direction_with_grayscale():
-    sensor_values = px.get_grayscale_data()
-    left_sensor = sensor_values[0]
-    right_sensor = sensor_values[2]
+    # Draw visualization on the original frame
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            # Adjust line drawing to fit in the lower 75% of the frame
+            y_offset = int(height * 0.25)  # Offset lines to fit in the lower 75%
+            cv2.line(frame, (x1, y1 + y_offset), (x2, y2 + y_offset), (0, 255, 0), 3)
 
-    if left_sensor > WHITE_THRESHOLD:
-        print("Left sensor detected high value! Turning right.")
-        px.set_dir_servo_angle(60)
-    elif right_sensor > WHITE_THRESHOLD:
-        print("Right sensor detected high value! Turning left.")
-        px.set_dir_servo_angle(-80)
-    else:
-        lane_follow()
+    # Draw the lane center marker on the original frame
+    cv2.circle(frame, (lane_center, height // 2), 5, (0, 0, 255), -1)
 
-def wait_for_user_input():
-    """Wait for the user to input a direction for the car."""
+    cv2.imshow("Lane Detection", frame)
+
+
+try:
+    #px.forward()
     while True:
-        print("Please choose a direction:")
-        print("1: Turn Left")
-        print("2: Turn Right")
-        print("3: Move Forward")
-        user_input = input("Enter your choice (1/2/3): ").strip()
-
-        if user_input == "1":
-            px.turn_signal_left_on()
-
-            print("Turning left.")
-            px.forward(5)  # Move forward slowly while turning
-            time.sleep(0.30)
-            px.set_dir_servo_angle(-25)  # Adjust the angle for left turn
-            px.forward(5)  # Move forward slowly while turning
-            time.sleep(1)
-            while True:
-                sensor_values = px.get_grayscale_data()
-                left_sensor = sensor_values[0]
-                right_sensor = sensor_values[2]
-
-                if right_sensor > 200:
-                    print("Right lane detected! Stopping turn.")
-                    main()
-                    break
-                elif left_sensor > 200:  # Left sensor detects the line
-                    print("Left line detected! Stopping turn.")
-                    px.turn_signal_left_off()
-                    main()
-                    break
-
-        elif user_input == "2":
-            px.turn_signal_right_on()
-
-            print("Turning right.")
-            px.forward(5)  # Move forward slowly while turning
-            time.sleep(0.30)
-            px.set_dir_servo_angle(17)  # Adjust the angle for right turn
-            px.forward(5)  # Move forward slowly while turning
-            time.sleep(1)
-            while True:
-                sensor_values = px.get_grayscale_data()
-                right_sensor = sensor_values[2]
-                if right_sensor > 200:  # Right sensor detects the line
-                    print("Right line detected! Stopping turn.")
-                    px.turn_signal_right_off()
-                    main()
-                    break
-
-        elif user_input == "3":
-            print("Moving forward.")
-            px.set_dir_servo_angle(-13)  # Neutral for forward movement
-            px.forward(10)  # Move forward at a reasonable speed
+        lane_follow()
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        else:
-            print("Invalid choice, please try again.")
-
-def main():
-    try:
-        px.forward(10)
-        while True:
-            ret, frame = cap.read()
-            # Check for stop line
-            detect_stop_line()  # Ensure stop line detection is checked on every loop
-            adjust_direction_with_grayscale()  # Check grayscale sensors for steering
-
-            time.sleep(0.1)
-    except KeyboardInterrupt:
-        print("Exiting program. Stopping the car.")
-        px.stop()
-        cap.release()
-        cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
+except KeyboardInterrupt:
+    print("Exiting...")
+finally:
+    cap.release()
+    px.stop()
+    cv2.destroyAllWindows()
