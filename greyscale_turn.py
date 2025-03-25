@@ -68,8 +68,9 @@ def right_turn():
     """Execute a right turn maneuver while maintaining lane following"""
     print("Initiating right turn")
     px.turn_signal_right_on()
+    px.forward(5)
     px.set_dir_servo_angle(27)  # Right turn angle
-    time.sleep(1)  # Turn for 1 second
+    time.sleep(2.5)  # Turn for 1 second
     px.turn_signal_right_off()
     px.set_dir_servo_angle(NEUTRAL_ANGLE)
     print("Right turn completed")
@@ -78,8 +79,9 @@ def left_turn():
     """Execute a left turn maneuver while maintaining lane following"""
     print("Initiating left turn")
     px.turn_signal_left_on()
+    px.forward(5)
     px.set_dir_servo_angle(-25)  # Left turn angle
-    time.sleep(1)  # Turn for 1 second
+    time.sleep(2.5)  # Turn for 1 second
     px.turn_signal_left_off()
     px.set_dir_servo_angle(NEUTRAL_ANGLE)
     print("Left turn completed")
