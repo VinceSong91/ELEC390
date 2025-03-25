@@ -247,7 +247,7 @@ def lane_follow():
     # Show the processed camera feed
     cv2.imshow("Camera", frame)
 
-ULTRASONIC_THRESHOLD = 20
+ULTRASONIC_THRESHOLD = 12
 OBSTACLE_DETECTED = False
 
 def check_obstacle():
