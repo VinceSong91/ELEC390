@@ -76,7 +76,7 @@ def lane_follow():
     # Adjust steering
     steering_adjustment = np.clip((lane_center - lower_75_percent_frame.shape[1] // 2) * 0.03, -30, 30)
     final_angle = NEUTRAL_ANGLE + steering_adjustment
-    px.set_dir_servo_angle(final_angle)
+    #px.set_dir_servo_angle(final_angle)
 
     # Draw visualization on the original frame
     if lines is not None:
@@ -93,7 +93,7 @@ def lane_follow():
 
 
 try:
-    px.forward(20)
+    #px.forward()
     while True:
         lane_follow()
         if cv2.waitKey(1) & 0xFF == ord('q'):

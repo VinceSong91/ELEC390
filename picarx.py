@@ -43,7 +43,7 @@ class Picarx(object):
                 turn_signal_pins: list = ['P5', 'P6'],
                 headlight_pin: str = 'P10',
                 config:str=CONFIG,
-                blink_interval: float = 0.5
+                blink_interval: float = 0.5,
                 ):
 
         # reset robot_hat
@@ -125,6 +125,9 @@ class Picarx(object):
         self.headlights.period(self.PERIOD)
         self.headlights.prescaler(self.PRESCALER)
         self.headlights.pulse_width_percent(self.HEADLIGHT_BRIGHTNESS)
+    
+    def get_distance(self):
+        return self.ultrasonic.read()
 
     def brake_lights_on(self):
         # Turn on the brake light LED (set duty cycle to 100%).
@@ -362,6 +365,6 @@ class Picarx(object):
 
 if __name__ == "__main__":
     px = Picarx()
-    px.forward(50)
+    px.forward(5)
     time.sleep(1)
     px.stop()
