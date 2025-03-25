@@ -197,7 +197,7 @@ class Music(_Basic_class):
                                "filename": filename, "volume": volume})
         obj.start()
 
-    def music_play(self, filename, loops=1, start=0.0, volume=None):
+    def music_play(self, filename, loops=1, start=0.0, volume=90):
         """
         Play music file
 
