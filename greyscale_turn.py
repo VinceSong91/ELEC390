@@ -52,10 +52,9 @@ def wait_for_user_input():
 
             print("Turning left.")
             px.forward(5)  # Move forward slowly while turning
-            time.sleep(0.30)
+            time.sleep(0.40)
             px.set_dir_servo_angle(-25)  # Adjust the angle for left turn
             px.forward(5)  # Move forward slowly while turning
-            time.sleep(1)
             while True:
                 sensor_values = px.get_grayscale_data()
                 left_sensor = sensor_values[0]
@@ -76,10 +75,9 @@ def wait_for_user_input():
 
             print("Turning right.")
             px.forward(5)  # Move forward slowly while turning
-            time.sleep(0.30)
+            time.sleep(0.4)
             px.set_dir_servo_angle(17)  # Adjust the angle for right turn
             px.forward(5)  # Move forward slowly while turning
-            time.sleep(1)
             while True:
                 sensor_values = px.get_grayscale_data()
                 right_sensor = sensor_values[2]
@@ -183,6 +181,7 @@ def main():
         px.forward(5)  # Start moving slowly
         while True:
             # Main loop handles stop line and direction adjustments.
+            lane_follow()
             detect_stop_line()  
             adjust_direction()
             time.sleep(0.1)
