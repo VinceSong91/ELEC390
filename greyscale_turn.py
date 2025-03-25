@@ -58,7 +58,7 @@ def wait_for_user_input():
             print("Turning left.")
             px.forward(5)  # Move forward slowly while turning
             time.sleep(0.40)
-            px.set_dir_servo_angle(-22)  # Adjust the angle for left turn
+            px.set_dir_servo_angle(-25)  # Adjust the angle for left turn
             px.forward(5)  # Move forward slowly while turning
             while True:
                 sensor_values = px.get_grayscale_data()
