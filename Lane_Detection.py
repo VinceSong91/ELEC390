@@ -73,16 +73,15 @@ def average_line(lines):
 def calculate_lane_center(frame_width, left_line, right_line):
     """Compute lane center as the midpoint between left and right lane boundaries."""
     if left_line is not None and right_line is not None:
-        # Use the average x position of the left and right lines as boundaries
         left_x = (left_line[0] + left_line[2]) / 2.0
         right_x = (right_line[0] + right_line[2]) / 2.0
         lane_center = (left_x + right_x) / 2.0
     elif left_line is not None:
         left_x = (left_line[0] + left_line[2]) / 2.0
-        lane_center = left_x + frame_width * 0.25  # assume right lane is further right
+        lane_center = left_x + frame_width * 0.25
     elif right_line is not None:
         right_x = (right_line[0] + right_line[2]) / 2.0
-        lane_center = right_x - frame_width * 0.25  # assume left lane is further left
+        lane_center = right_x - frame_width * 0.25
     else:
         lane_center = frame_width / 2.0
     return int(lane_center)
@@ -93,33 +92,25 @@ def lane_follow():
         return
 
     height, width = frame.shape[:2]
-    # Focus on the lower part of the image where lanes are expected
     roi = frame[int(height * 0.25):, :]
     
-    # Preprocess to get separate masks for white and yellow lanes
     white_mask, yellow_mask = preprocess_image(roi)
     
-    # Detect lines on each mask
     white_lines = detect_lines(white_mask)
     yellow_lines = detect_lines(yellow_mask)
     
-    # Get lane boundaries for white (right lane) and yellow (left lane)
     white_left, white_right = calculate_lane_boundaries(white_lines, roi.shape[1])
     yellow_left, yellow_right = calculate_lane_boundaries(yellow_lines, roi.shape[1])
     
-    # Average lines for each side (we assume yellow lane is left and white lane is right)
     left_line = average_line(yellow_left) if yellow_left else average_line(yellow_lines)
     right_line = average_line(white_right) if white_right else average_line(white_lines)
     
-    # Calculate the lane center
     lane_center = calculate_lane_center(roi.shape[1], left_line, right_line)
     
-    # Adjust steering: steering adjustment factor can be tuned
     steering_adjustment = np.clip((lane_center - (roi.shape[1] // 2)) * 0.03, -30, 30)
     final_angle = NEUTRAL_ANGLE + steering_adjustment
     px.set_dir_servo_angle(final_angle)
     
-    # Visualization: draw detected lines and lane center marker
     vis = roi.copy()
     if left_line is not None:
         cv2.line(vis, (left_line[0], left_line[1]), (left_line[2], left_line[3]), (255, 0, 0), 3)
@@ -129,7 +120,6 @@ def lane_follow():
     
     cv2.imshow("Lane Detection", vis)
 
-# Main loop
 try:
     px.forward(5)
     while True:
