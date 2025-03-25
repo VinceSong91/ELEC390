@@ -259,10 +259,9 @@ def main():
                 execute_command(command)
             
             # Only perform driving operations if not stopped
-            if not STOPPED and not TURNING:
-                lane_follow()
-                detect_stop_line()
-                adjust_direction()
+            lane_follow()
+            detect_stop_line()
+            adjust_direction()
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
