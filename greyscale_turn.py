@@ -4,6 +4,10 @@ import cv2
 import numpy as np
 import threading
 from queue import Queue
+from robot_hat import Music,TTS
+
+music = Music()
+
 
 px = Picarx()
 cap = cv2.VideoCapture(0)
@@ -68,6 +72,7 @@ def right_turn():
     """Execute a right turn maneuver while maintaining lane following"""
     print("Initiating right turn")
     px.turn_signal_right_on()
+    time.sleep(1)
     px.forward(10)
     px.set_dir_servo_angle(20)  # Right turn angle
     time.sleep(3.5)  # Turn for 1 second
@@ -79,6 +84,7 @@ def left_turn():
     """Execute a left turn maneuver while maintaining lane following"""
     print("Initiating left turn")
     px.turn_signal_left_on()
+    time.sleep(1)
     px.forward(10)
     px.set_dir_servo_angle(-27)  # Left turn angle
     time.sleep(3.25)  # Turn for 1 second
@@ -102,8 +108,6 @@ def adjust_direction():
     elif right_sensor > 200:
         print("Right sensor detected high value! Turning left.")
         px.set_dir_servo_angle(-80)
-    elif middle_sensor > 100:
-        right_turn()
     else:
         px.set_dir_servo_angle(NEUTRAL_ANGLE)
 
@@ -255,11 +259,11 @@ def check_obstacle():
     global STOPPED, OBSTACLE_DETECTED
     while True:
         distance = px.ultrasonic.read()
-        if distance <= ULTRASONIC_THRESHOLD:
+        if distance <= ULTRASONIC_THRESHOLD and distance > 0:
             print(f"Obstacle detected at {distance} cm! Stopping.")
             OBSTACLE_DETECTED = True
             px.stop()
-        elif OBSTACLE_DETECTED and distance > ULTRASONIC_THRESHOLD:
+        elif OBSTACLE_DETECTED and distance > ULTRASONIC_THRESHOLD and distance > 0:
             print("Obstacle cleared. Resuming.")
             OBSTACLE_DETECTED = False
             if not STOPPED:
