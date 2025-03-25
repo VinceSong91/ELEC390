@@ -204,7 +204,6 @@ def lane_follow():
 def main():
     try:
         px.forward(5)  # Start moving slowly
-        get_user_input()
         while True:
             # Main loop handles stop line and direction adjustments.
             lane_follow()
