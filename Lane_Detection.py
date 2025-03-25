@@ -7,7 +7,7 @@ import time
 NEUTRAL_ANGLE = -13.5
 CAMERA_TILT_ANGLE = -20
 CAMERA_PAN_ANGLE = -10
-WHITE_THRESHOLD = 700
+WHITE_THRESHOLD = 200  # Adjusted threshold for grayscale sensor
 
 # Initialize robot and camera
 px = Picarx()
@@ -40,7 +40,6 @@ def detect_lines(mask):
 def average_line(lines):
     if len(lines) == 0:
         return None
-    # Ensure that each line has 4 elements
     lines = [line[0] for line in lines if len(line) == 4]
     
     if len(lines) == 0:
@@ -59,8 +58,8 @@ def detect_stop_line():
     sensor_values = px.get_grayscale_data()
     print("Grayscale sensor readings:", sensor_values)
     
-    # If all sensors detect a high value (likely a white stop line)
-    if all(value > WHITE_THRESHOLD for value in sensor_values):
+    # Adjusted stop line detection logic based on grayscale sensor values
+    if any(value > WHITE_THRESHOLD for value in sensor_values):
         print("Stop line detected! Stopping the car and waiting for user input.")
         px.stop()  # Stop the car when the stop line is detected
         time.sleep(2)  # Pause for a moment
@@ -173,8 +172,8 @@ def main():
         while True:
             ret, frame = cap.read()
             # Check for stop line
-            detect_stop_line()
-            adjust_direction_with_grayscale()
+            detect_stop_line()  # Ensure stop line detection is checked on every loop
+            adjust_direction_with_grayscale()  # Check grayscale sensors for steering
 
             time.sleep(0.1)
     except KeyboardInterrupt:
