@@ -3,6 +3,7 @@ import time
 
 px = Picarx()
 WHITE_THRESHOLD = 700  # Adjust this based on your environment
+obstacle_threshold = 7 # cm
 
 def adjust_direction():
     """Adjust the car's direction based on grayscale sensor values."""
@@ -96,11 +97,20 @@ def wait_for_user_input():
 
 def main():
     try:
-        px.forward(10)  # Start moving slowly
+        px.forward(5)  # Start moving slowly
         while True:
-            detect_stop_line()  # Continuously check for stop line
-            adjust_direction()  # Adjust direction based on sensor data
+            distance = px.get_distance()
+            while distance is None or distance > obstacle_threshold:
+                detect_stop_line()  # Continuously check for stop line
+                adjust_direction()  # Adjust direction based on sensor data
+                time.sleep(0.1)
+                distance = px.get_distance()
+            px.stop()
+            while px.get_distance() < obstacle_threshold:
+                time.sleep(2)
+            px.forward(5)
             time.sleep(0.1)
+
     except KeyboardInterrupt:
         print("Exiting program. Stopping the car.")
         px.stop()
