@@ -70,18 +70,17 @@ command_queue = Queue()
 
 def get_user_input():
     """Run in a separate thread to get user input without blocking main loop"""
-    while True:
-        print("\nOptions while driving:")
-        print("1: Turn Left")
-        print("2: Turn Right")
-        print("s: Stop/Start")
-        print("q: Quit")
-        user_input = input("Enter command: ").strip().lower()
+    print("\nOptions while driving:")
+    print("1: Turn Left")
+    print("2: Turn Right")
+    print("s: Stop/Start")
+    print("q: Quit")
+    user_input = input("Enter command: ").strip().lower()
         
-        if user_input in ['1', '2', 's', 'q']:
-            command_queue.put(user_input)
-        if user_input == 'q':
-            break
+    if user_input in ['1', '2', 's', 'q']:
+        command_queue.put(user_input)
+    if user_input == 'q':
+        break
 
 
 def remove_white_boards(frame):
