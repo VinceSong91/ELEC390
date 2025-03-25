@@ -2,12 +2,15 @@ from picarx import Picarx
 import time
 import cv2
 import numpy as np
+from queue import Queue
 
 px = Picarx()
 cap = cv2.VideoCapture(0)
 NEUTRAL_ANGLE = -13.5
 CAMERA_TILT_ANGLE = -25
 CAMERA_PAN_ANGLE = -15 # Further adjust to turn the camera more to the left
+TURN_SPEED = 5
+TURN_DELAY = 0.4
 px.set_cam_tilt_angle(CAMERA_TILT_ANGLE)
 px.set_cam_pan_angle(CAMERA_PAN_ANGLE)
 
@@ -41,64 +44,65 @@ def detect_stop_line():
         print("Stop line detected! Stopping the car and waiting for user input.")
         px.stop()  # Stop the car when the stop line is detected
         time.sleep(2)  # Pause for a moment
-        wait_for_user_input()  # Wait for user input to continue
+        get_user_input()  # Wait for user input to continue
 
-def wait_for_user_input():
-    """Wait for the user to input a direction for the car."""
+def right_turn():
+    """Execute a right turn maneuver."""
+    px.turn_signal_right_on()
+    print("Turning right.")
+    px.forward(TURN_SPEED)
+    time.sleep(TURN_DELAY)
+    px.set_dir_servo_angle(27)  # Adjust the angle for right turn
+    
     while True:
-        print("Please choose a direction:")
+        sensor_values = px.get_grayscale_data()
+        right_sensor = sensor_values[2]
+        if right_sensor > 200:  # Right sensor detects the line
+            print("Right line detected! Completing turn.")
+            px.turn_signal_right_off()
+            px.set_dir_servo_angle(NEUTRAL_ANGLE)
+            break
+        time.sleep(0.1)
+
+def left_turn():
+    """Execute a left turn maneuver."""
+    px.turn_signal_left_on()
+    print("Turning left.")
+    px.forward(TURN_SPEED)
+    time.sleep(TURN_DELAY)
+    px.set_dir_servo_angle(-25)  # Adjust the angle for left turn
+    
+    while True:
+        sensor_values = px.get_grayscale_data()
+        left_sensor = sensor_values[0]
+        right_sensor = sensor_values[2]
+
+        if right_sensor > 200:
+            print("Right lane detected! Completing turn.")
+            px.turn_signal_left_off()
+            px.set_dir_servo_angle(NEUTRAL_ANGLE)
+            break
+        elif left_sensor > 200:  # Left sensor detects the line
+            print("Left line detected! Completing turn.")
+            px.turn_signal_left_off()
+            px.set_dir_servo_angle(NEUTRAL_ANGLE)
+            break
+        time.sleep(0.1)
+command_queue = Queue()
+def get_user_input():
+    """Run in a separate thread to get user input without blocking main loop"""
+    while True:
+        print("\nOptions while driving:")
         print("1: Turn Left")
         print("2: Turn Right")
-        print("3: Move Forward")
-        user_input = input("Enter your choice (1/2/3): ").strip()
-
-        if user_input == "1":
-            px.turn_signal_left_on()
-
-            print("Turning left.")
-            px.forward(5)  # Move forward slowly while turning
-            time.sleep(0.40)
-            px.set_dir_servo_angle(-25)  # Adjust the angle for left turn
-            px.forward(5)  # Move forward slowly while turning
-            while True:
-                sensor_values = px.get_grayscale_data()
-                left_sensor = sensor_values[0]
-                right_sensor = sensor_values[2]
-
-                if right_sensor > 200:
-                    print("Right lane detected! Stopping turn.")
-                    main()
-                    break
-                elif left_sensor > 200:  # Left sensor detects the line
-                    print("Left line detected! Stopping turn.")
-                    px.turn_signal_left_off()
-                    main()
-                    break
-
-        elif user_input == "2":
-            px.turn_signal_right_on()
-
-            print("Turning right.")
-            px.forward(5)  # Move forward slowly while turning
-            time.sleep(0.4)
-            px.set_dir_servo_angle(27)  # Adjust the angle for right turn
-            px.forward(5)  # Move forward slowly while turning
-            while True:
-                sensor_values = px.get_grayscale_data()
-                right_sensor = sensor_values[2]
-                if right_sensor > 200:  # Right sensor detects the line
-                    print("Right line detected! Stopping turn.")
-                    px.turn_signal_right_off()
-                    main()
-                    break
-
-        elif user_input == "3":
-            print("Moving forward.")
-            px.set_dir_servo_angle(-13)  # Neutral for forward movement
-            px.forward(10)  # Move forward at a reasonable speed
+        print("s: Stop/Start")
+        print("q: Quit")
+        user_input = input("Enter command: ").strip().lower()
+        
+        if user_input in ['1', '2', 's', 'q']:
+            command_queue.put(user_input)
+        if user_input == 'q':
             break
-        else:
-            print("Invalid choice, please try again.")
 
 
 def remove_white_boards(frame):
@@ -223,6 +227,7 @@ def main():
         px.forward(5)  # Start moving slowly
         while True:
             # Main loop handles stop line and direction adjustments.
+            get_user_input()
             lane_follow()
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
