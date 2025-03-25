@@ -244,6 +244,19 @@ def lane_follow():
     # Show the processed camera feed
     cv2.imshow("Camera", frame)
 
+ULTRASONIC_THRESHOLD = 20
+
+def check_obstacle():
+    """Continuously check for obstacles using the ultrasonic sensor."""
+    global STOPPED
+    while True:
+        distance = px.ultrasonic.read()
+        if distance < ULTRASONIC_THRESHOLD and not STOPPED and not TURNING:
+            print(f"Obstacle detected at {distance} cm! Stopping.")
+            STOPPED = True
+            px.stop()
+        time.sleep(0.1)
+
 def main():
     try:
         # Start user input thread
@@ -253,6 +266,7 @@ def main():
         px.forward(DRIVING_SPEED)
         
         while True:
+            check_obstacle()
             # Check for user commands
             if not command_queue.empty():
                 command = command_queue.get()
