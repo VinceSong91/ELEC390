@@ -248,6 +248,7 @@ def lane_follow():
     cv2.imshow("Camera", frame)
 
 ULTRASONIC_THRESHOLD = 2
+OBSTACLE_DETECTED = False
 
 def check_obstacle():
     """Continuously check for obstacles using the ultrasonic sensor."""
