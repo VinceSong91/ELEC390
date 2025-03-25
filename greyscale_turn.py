@@ -75,7 +75,6 @@ def right_turn():
     time.sleep(1)
     px.forward(10)
     px.set_dir_servo_angle(20)  # Right turn angle
-    music.music_play('tokyodrift-368bnuq4-38107.mp3')
     time.sleep(3.5)  # Turn for 1 second
     px.turn_signal_right_off()
     px.set_dir_servo_angle(NEUTRAL_ANGLE)
@@ -282,7 +281,7 @@ def main():
         obstacle_thread.start()
         
         px.forward(DRIVING_SPEED)
-        
+        music.music_play('tokyodrift-368bnuq4-38107.mp3')
         while True:
             # Check for user commands
             if not command_queue.empty():
