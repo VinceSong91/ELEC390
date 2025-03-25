@@ -5,6 +5,14 @@ import numpy as np
 import threading
 from queue import Queue
 
+
+
+from aiymakerkit import vision
+from aiymakerkit import utils
+from pycoral.utils.dataset import read_label_file
+
+import os.path
+
 px = Picarx()
 cap = cv2.VideoCapture(0)
 NEUTRAL_ANGLE = -10.5
@@ -69,7 +77,7 @@ def right_turn():
     print("Initiating right turn")
     px.turn_signal_right_on()
     px.forward(10)
-    px.set_dir_servo_angle(20)  # Right turn angle
+    px.set_dir_servo_angle(30)  # Right turn angle
     time.sleep(3.5)  # Turn for 1 second
     px.turn_signal_right_off()
     px.set_dir_servo_angle(NEUTRAL_ANGLE)
@@ -93,7 +101,6 @@ def adjust_direction():
         
     sensor_values = px.get_grayscale_data()
     left_sensor = sensor_values[0]
-    middle_sensor = sensor_values[1]
     right_sensor = sensor_values[2]
 
     if left_sensor > 200:
@@ -102,8 +109,6 @@ def adjust_direction():
     elif right_sensor > 200:
         print("Right sensor detected high value! Turning left.")
         px.set_dir_servo_angle(-80)
-    elif middle_sensor > 100:
-        right_turn()
     else:
         px.set_dir_servo_angle(NEUTRAL_ANGLE)
 
@@ -247,49 +252,64 @@ def lane_follow():
     # Show the processed camera feed
     cv2.imshow("Camera", frame)
 
-ULTRASONIC_THRESHOLD = 12
-OBSTACLE_DETECTED = False
+    
+    def path(name):
+        root = os.path.dirname(os.path.realpath(__file__))
+        return os.path.join(root, 'models', name)
+    
+    # Model
+    ROAD_SIGN_DETECTION_MODEL = path('efficientdet-lite-road-signs.tflite')
+    ROAD_SIGN_DETECTION_MODEL_EDGETPU = path('efficientdet-lite-road-signs_edgetpu.tflite')
+
+    # Labels
+    ROAD_SIGN_DETECTION_LABELS = path('road-signs-labels.txt')
+
+    detector = vision.Detector(ROAD_SIGN_DETECTION_MODEL)
+    labels = read_label_file(ROAD_SIGN_DETECTION_LABELS)
+    for frame in vision.get_frames():
+        objects = detector.get_objects(frame, threshold=0.4)
+        #vision.draw_objects(frame, objects, labels)
+        print("Detected objects:")
+        for obj in objects:
+            label = labels.get(obj.label_id, "Unknown")
+            confidence = obj.score
+            print(f"- {label} ({confidence:.2%} confidence)")
+
+
+
+
+ULTRASONIC_THRESHOLD = 20
 
 def check_obstacle():
     """Continuously check for obstacles using the ultrasonic sensor."""
-    global STOPPED, OBSTACLE_DETECTED
+    global STOPPED
     while True:
         distance = px.ultrasonic.read()
-        if distance <= ULTRASONIC_THRESHOLD:
+        if distance < ULTRASONIC_THRESHOLD and not STOPPED and not TURNING:
             print(f"Obstacle detected at {distance} cm! Stopping.")
-            OBSTACLE_DETECTED = True
+            STOPPED = True
             px.stop()
-        elif OBSTACLE_DETECTED and distance > ULTRASONIC_THRESHOLD:
-            print("Obstacle cleared. Resuming.")
-            OBSTACLE_DETECTED = False
-            if not STOPPED:
-                px.forward(DRIVING_SPEED)
         time.sleep(0.1)
 
 def main():
     try:
-        # Start user input and obstacle detection threads
+        # Start user input thread
         input_thread = threading.Thread(target=get_user_input, daemon=True)
         input_thread.start()
-
-        obstacle_thread = threading.Thread(target=check_obstacle, daemon=True)
-        obstacle_thread.start()
         
         px.forward(DRIVING_SPEED)
         
         while True:
+            check_obstacle()
             # Check for user commands
             if not command_queue.empty():
                 command = command_queue.get()
                 execute_command(command)
             
-            # Only perform driving operations if not stopped or if no obstacle detected
-            if not STOPPED and not OBSTACLE_DETECTED:
-                lane_follow()
-                detect_stop_line()
-                adjust_direction()
-            elif OBSTACLE_DETECTED:
-                px.stop()
+            # Only perform driving operations if not stopped
+            lane_follow()
+            detect_stop_line()
+            adjust_direction()
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
