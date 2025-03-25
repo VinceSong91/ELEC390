@@ -40,11 +40,19 @@ def detect_lines(mask):
 def average_line(lines):
     if len(lines) == 0:
         return None
+    # Ensure that each line has 4 elements
+    lines = [line[0] for line in lines if len(line) == 4]
+    
+    if len(lines) == 0:
+        return None
+    
     x1_avg = np.mean([line[0] for line in lines])
     y1_avg = np.mean([line[1] for line in lines])
     x2_avg = np.mean([line[2] for line in lines])
     y2_avg = np.mean([line[3] for line in lines])
+    
     return int(x1_avg), int(y1_avg), int(x2_avg), int(y2_avg)
+
 
 def detect_stop_line(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
