@@ -80,7 +80,7 @@ def left_turn():
     print("Initiating left turn")
     px.turn_signal_left_on()
     px.forward(10)
-    px.set_dir_servo_angle(-30)  # Left turn angle
+    px.set_dir_servo_angle(-26)  # Left turn angle
     time.sleep(3.25)  # Turn for 1 second
     px.turn_signal_left_off()
     px.set_dir_servo_angle(NEUTRAL_ANGLE)
