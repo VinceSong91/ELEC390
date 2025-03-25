@@ -181,7 +181,7 @@ def lane_follow():
 
 def main():
     try:
-        px.forward(5)  # Start moving slowly
+        px.forward(10)  # Start moving slowly
         while True:
             distance = px.get_distance()
             while distance is None or distance > obstacle_threshold:
