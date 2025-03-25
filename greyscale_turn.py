@@ -88,7 +88,9 @@ def left_turn():
             px.set_dir_servo_angle(NEUTRAL_ANGLE)
             break
         time.sleep(0.1)
+
 command_queue = Queue()
+
 def get_user_input():
     """Run in a separate thread to get user input without blocking main loop"""
     while True:
@@ -227,12 +229,12 @@ def main():
         px.forward(5)  # Start moving slowly
         while True:
             # Main loop handles stop line and direction adjustments.
-            get_user_input()
             lane_follow()
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
             detect_stop_line()  
             adjust_direction()
+            get_user_input()
             time.sleep(0.1)
     except KeyboardInterrupt:
         print("Exiting program. Stopping the car.")
