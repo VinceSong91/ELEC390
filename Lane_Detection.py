@@ -61,11 +61,14 @@ def average_line(lines):
     """Average a list of lines into a single representative line."""
     if len(lines) == 0:
         return None
-    x1_avg = np.mean([line[0] for line in lines])
-    y1_avg = np.mean([line[1] for line in lines])
-    x2_avg = np.mean([line[2] for line in lines])
-    y2_avg = np.mean([line[3] for line in lines])
-    return int(x1_avg), int(y1_avg), int(x2_avg), int(y2_avg)
+    try:
+        x1_avg = np.mean([line[0] for line in lines])
+        y1_avg = np.mean([line[1] for line in lines])
+        x2_avg = np.mean([line[2] for line in lines])
+        y2_avg = np.mean([line[3] for line in lines])
+        return int(x1_avg), int(y1_avg), int(x2_avg), int(y2_avg)
+    except IndexError:
+        return None
 
 def calculate_lane_center(frame_width, left_line, right_line):
     """Compute lane center as the midpoint between left and right lane boundaries."""
