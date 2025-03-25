@@ -79,8 +79,6 @@ def get_user_input():
         
     if user_input in ['1', '2', 's', 'q']:
         command_queue.put(user_input)
-    if user_input == 'q':
-        break
 
 
 def remove_white_boards(frame):
