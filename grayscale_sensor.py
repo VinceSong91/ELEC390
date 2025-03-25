@@ -1,17 +1,17 @@
 from picarx import Picarx
 import time
+import threading
+
+# Global obstacle threshold (in centimeters)
+OBSTACLE_THRESHOLD = 10  
 
 px = Picarx()
-WHITE_THRESHOLD = 700  # Adjust this based on your environment
-obstacle_threshold = 7 # cm
 
 def adjust_direction():
     """Adjust the car's direction based on grayscale sensor values."""
     sensor_values = px.get_grayscale_data()
     left_sensor = sensor_values[0]
     right_sensor = sensor_values[2]
-
-
 
     if left_sensor > 200:
         print("Left sensor detected high value! Turning right.")
@@ -29,7 +29,7 @@ def detect_stop_line():
     print("Grayscale sensor readings:", sensor_values)
     
     # If all sensors detect a high value (likely a white stop line)
-    if all(value > WHITE_THRESHOLD for value in sensor_values):
+    if all(value > 700 for value in sensor_values):
         print("Stop line detected! Stopping the car and waiting for user input.")
         px.stop()  # Stop the car when the stop line is detected
         time.sleep(2)  # Pause for a moment
@@ -46,71 +46,69 @@ def wait_for_user_input():
 
         if user_input == "1":
             px.turn_signal_left_on()
-
             print("Turning left.")
             px.forward(5)  # Move forward slowly while turning
             time.sleep(0.30)
             px.set_dir_servo_angle(-25)  # Adjust the angle for left turn
-            px.forward(5)  # Move forward slowly while turning
+            px.forward(5)
             time.sleep(1)
             while True:
                 sensor_values = px.get_grayscale_data()
                 left_sensor = sensor_values[0]
                 right_sensor = sensor_values[2]
-
                 if right_sensor > 200:
                     print("Right lane detected! Stopping turn.")
-                    main()
-                    break
-                elif left_sensor > 200:  # Left sensor detects the line
+                    px.turn_signal_left_off()
+                    return
+                elif left_sensor > 200:
                     print("Left line detected! Stopping turn.")
                     px.turn_signal_left_off()
-                    main()
-                    break
+                    return
 
         elif user_input == "2":
             px.turn_signal_right_on()
-
             print("Turning right.")
-            px.forward(5)  # Move forward slowly while turning
+            px.forward(5)
             time.sleep(0.30)
             px.set_dir_servo_angle(17)  # Adjust the angle for right turn
-            px.forward(5)  # Move forward slowly while turning
+            px.forward(5)
             time.sleep(1)
             while True:
                 sensor_values = px.get_grayscale_data()
                 right_sensor = sensor_values[2]
-                if right_sensor > 200:  # Right sensor detects the line
+                if right_sensor > 200:
                     print("Right line detected! Stopping turn.")
                     px.turn_signal_right_off()
-                    main()
-                    break
-
+                    return
         elif user_input == "3":
             print("Moving forward.")
             px.set_dir_servo_angle(-13)  # Neutral for forward movement
             px.forward(10)  # Move forward at a reasonable speed
-            break
+            return
         else:
             print("Invalid choice, please try again.")
 
+def ultrasonic_monitor():
+    """Background thread function to continuously check for obstacles."""
+    while True:
+        distance = px.get_distance()
+        if distance is not None and distance < OBSTACLE_THRESHOLD:
+            print("Ultrasonic: Obstacle detected at", distance, "cm. Stopping car.")
+            px.stop()
+        time.sleep(0.1)
 
 def main():
+    # Start the ultrasonic monitor in a background thread.
+    monitor_thread = threading.Thread(target=ultrasonic_monitor, daemon=True)
+    monitor_thread.start()
+    
     try:
         px.forward(5)  # Start moving slowly
         while True:
-            distance = px.get_distance()
-            while distance is None or distance > obstacle_threshold:
-                detect_stop_line()  # Continuously check for stop line
-                adjust_direction()  # Adjust direction based on sensor data
-                time.sleep(0.1)
-                distance = px.get_distance()
-            px.stop()
-            while px.get_distance() < obstacle_threshold:
-                time.sleep(2)
-            px.forward(5)
+            # Main loop handles stop line and direction adjustments.
+            detect_stop_line()  
+            adjust_direction()
             time.sleep(0.1)
-
     except KeyboardInterrupt:
         print("Exiting program. Stopping the car.")
         px.stop()
