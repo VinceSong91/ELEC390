@@ -72,7 +72,7 @@ def right_turn():
     time.sleep(1)
     px.forward(10)
     px.set_dir_servo_angle(20)  # Right turn angle
-    time.sleep(3.35)  # Turn for 1 second
+    time.sleep(3)  # Turn for 1 second
     px.turn_signal_right_off()
     px.set_dir_servo_angle(NEUTRAL_ANGLE)
     print("Right turn completed")
@@ -83,7 +83,7 @@ def left_turn():
     px.turn_signal_left_on()
     time.sleep(1)
     px.forward(10)
-    px.set_dir_servo_angle(-27)  # Left turn angle
+    px.set_dir_servo_angle(-25)  # Left turn angle
     time.sleep(3)  # Turn for 1 second
     px.turn_signal_left_off()
     px.set_dir_servo_angle(NEUTRAL_ANGLE)
@@ -96,7 +96,6 @@ def adjust_direction():
         
     sensor_values = px.get_grayscale_data()
     left_sensor = sensor_values[0]
-    middle_sensor = sensor_values[1]
     right_sensor = sensor_values[2]
 
     if left_sensor > 200:
